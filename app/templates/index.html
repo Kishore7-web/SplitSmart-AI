@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SplitSmart AI | Expense Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <h2>SplitSmart</h2>
+                <span>AI Expense Manager</span>
+            </div>
+        </div>
+
+        <nav>
+            <a href="#" class="nav-link active">▦ Dashboard</a>
+            <a href="#groups" class="nav-link">◫ Groups</a>
+            <a href="#expenses" class="nav-link">↗ Expenses</a>
+            <a href="#settlements" class="nav-link">⇄ Settlements</a>
+            <a href="#assistant" class="nav-link">✧ AI Assistant</a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="status-dot"></div>
+            <span>System operational</span>
+            <p>SplitSmart AI v1.0.0</p>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">OVERVIEW</p>
+                <h1>Dashboard</h1>
+                <p class="subtitle">Manage shared expenses intelligently.</p>
+            </div>
+
+            <button class="primary-btn" onclick="showSection('groups')">
+                + Create Group
+            </button>
+        </header>
+
+        <section class="welcome-card">
+            <div>
+                <p class="eyebrow">WELCOME TO SPLITSMART</p>
+                <h2>Split expenses. Stay organized.</h2>
+                <p>Track group spending, calculate balances and simplify settlements.</p>
+            </div>
+            <div class="welcome-symbol">✧</div>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <span>Total Groups</span>
+                <h2 id="totalGroups">0</h2>
+                <small>Your expense groups</small>
+            </div>
+
+            <div class="stat-card">
+                <span>Total Expenses</span>
+                <h2 id="totalExpenses">₹0</h2>
+                <small>Across your groups</small>
+            </div>
+
+            <div class="stat-card">
+                <span>Pending Settlements</span>
+                <h2 id="pendingSettlements">0</h2>
+                <small>Payments awaiting completion</small>
+            </div>
+
+            <div class="stat-card">
+                <span>Active Members</span>
+                <h2 id="totalMembers">0</h2>
+                <small>Across your groups</small>
+            </div>
+        </section>
+
+        <section id="groups" class="content-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Your Groups</h2>
+                    <p>Manage your friends, roommates and travel groups.</p>
+                </div>
+                <button class="secondary-btn" onclick="loadDashboard()">Refresh</button>
+            </div>
+
+            <div class="two-column">
+
+                <div class="panel">
+                    <h3>Create a Group</h3>
+
+                    <form id="groupForm">
+                        <label>Group name</label>
+                        <input id="groupName" type="text"
+                            placeholder="e.g. College Friends" required>
+
+                        <label>Description</label>
+                        <textarea id="groupDescription"
+                            placeholder="Describe your group"></textarea>
+
+                        <button class="primary-btn full-width" type="submit">
+                            Create Group
+                        </button>
+                    </form>
+
+                    <p id="groupMessage" class="message"></p>
+                </div>
+
+                <div class="panel">
+                    <h3>Existing Groups</h3>
+                    <div id="groupsList">
+                        <p class="muted">Loading groups...</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="expenses" class="content-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Expense Management</h2>
+                    <p>Record and track shared expenses.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Selected Group</h3>
+
+                <select id="expenseGroup">
+                    <option value="">Select a group</option>
+                </select>
+
+                <div id="expenseGroupInfo" class="muted">
+                    Select a group to view its expenses.
+                </div>
+            </div>
+        </section>
+
+        <section id="assistant" class="content-section">
+            <div class="section-heading">
+                <div>
+                    <h2>AI Expense Assistant</h2>
+                    <p>Describe an expense in natural language.</p>
+                </div>
+                <span class="ai-tag">✧ GEMINI AI</span>
+            </div>
+
+            <div class="panel ai-panel">
+                <label>Select group</label>
+                <select id="aiGroup">
+                    <option value="">Select a group</option>
+                </select>
+
+                <label>Describe your expense</label>
+                <textarea id="aiText"
+                    placeholder="Example: I paid 900 rupees for dinner. Split equally between me, Arun and Rahul."
+                    rows="4"></textarea>
+
+                <button class="primary-btn" id="aiButton" onclick="createAIExpense()">
+                    ✧ Analyze and Create Expense
+                </button>
+
+                <div id="aiResult" class="message"></div>
+            </div>
+        </section>
+
+        <section id="settlements" class="content-section">
+            <div class="section-heading">
+                <div>
+                    <h2>Settlements</h2>
+                    <p>Understand who owes whom.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <label>Select group</label>
+                <select id="settlementGroup">
+                    <option value="">Select a group</option>
+                </select>
+
+                <div id="balanceList" class="result-list">
+                    <p class="muted">Select a group to view balances.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>SplitSmart AI © 2026 · Intelligent Group Expense Manager</p>
+        </footer>
+
+    </main>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
