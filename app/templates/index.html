@@ -1,206 +1,1014 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SplitSmart AI | Expense Manager</title>
+    <meta name="theme-color" content="#0f172a">
+    <title>SplitSmart AI 2.0 | The Financial Memory of a Group</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/app.js" defer></script>
 </head>
 <body>
 
-<div class="app-layout">
+<div class="app-shell">
 
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-icon">S</div>
-            <div>
-                <h2>SplitSmart</h2>
-                <span>AI Expense Manager</span>
+        <a class="brand" href="#dashboard">
+            <span class="brand-icon">S</span>
+            <div class="brand-text">
+                <span class="brand-title">SplitSmart AI <span class="version-badge">2.0</span></span>
+                <span class="brand-subtitle">The Financial Memory of a Group</span>
             </div>
+        </a>
+
+        <!-- ACTIVE GROUP SELECTOR IN SIDEBAR -->
+        <div class="sidebar-group-picker">
+            <label for="globalGroupSelect">ACTIVE GROUP</label>
+            <select id="globalGroupSelect" onchange="onGlobalGroupChange(this.value)">
+                <option value="">Loading groups...</option>
+            </select>
+            <div id="activeGroupBadge" class="active-group-meta">No group selected</div>
         </div>
 
-        <nav>
-            <a href="#" class="nav-link active">▦ Dashboard</a>
-            <a href="#groups" class="nav-link">◫ Groups</a>
-            <a href="#expenses" class="nav-link">↗ Expenses</a>
-            <a href="#settlements" class="nav-link">⇄ Settlements</a>
-            <a href="#assistant" class="nav-link">✧ AI Assistant</a>
+        <div class="sidebar-label">WORKSPACE</div>
+
+        <nav class="sidebar-nav">
+            <a class="nav-link active" href="#dashboard" data-section="dashboard">
+                <span class="nav-icon">▦</span> Dashboard
+            </a>
+            <a class="nav-link" href="#groups" data-section="groups">
+                <span class="nav-icon">◫</span> My Groups & Members
+            </a>
+            <a class="nav-link" href="#timeline" data-section="timeline">
+                <span class="nav-icon">◷</span> Activity Timeline
+            </a>
+            <a class="nav-link" href="#expenses" data-section="expenses">
+                <span class="nav-icon">↗</span> Expenses
+            </a>
+            <a class="nav-link" href="#evidence" data-section="evidence">
+                <span class="nav-icon">📁</span> Evidence & Uploads
+            </a>
+            <a class="nav-link" href="#analytics" data-section="analytics">
+                <span class="nav-icon">📊</span> Budget & Analytics
+            </a>
+            <a class="nav-link" href="#settlements" data-section="settlements">
+                <span class="nav-icon">⇄</span> Settlements
+            </a>
+            <a class="nav-link" href="#paypal" data-section="paypal">
+                <span class="nav-icon">💳</span> PayPal Sandbox
+            </a>
+            <a class="nav-link" href="#assistant" data-section="assistant">
+                <span class="nav-icon">✧</span> AI Assistant
+            </a>
+            <a class="nav-link" href="#settings" data-section="settings">
+                <span class="nav-icon">⚙</span> Diagnostics
+            </a>
         </nav>
 
         <div class="sidebar-bottom">
-            <div class="status-dot"></div>
-            <span>System operational</span>
-            <p>SplitSmart AI v1.0.0</p>
+            <div class="sidebar-help">
+                <span class="help-icon">✦</span>
+                <strong>The Financial Memory</strong>
+                <p>One Group. Any Activity. Every Expense Understood. Every Payment Accounted For.</p>
+            </div>
+            <div class="sidebar-footer">SplitSmart AI · Version 2.0.0</div>
         </div>
     </aside>
 
+
+    <!-- MAIN CONTENT -->
     <main class="main-content">
 
+        <!-- TOPBAR -->
         <header class="topbar">
             <div>
-                <p class="eyebrow">OVERVIEW</p>
-                <h1>Dashboard</h1>
-                <p class="subtitle">Manage shared expenses intelligently.</p>
+                <span class="eyebrow" id="topbarEyebrow">SPLITSMART AI 2.0 · FINANCIAL INTELLIGENCE</span>
+                <h1 id="pageHeading">Dashboard</h1>
             </div>
-
-            <button class="primary-btn" onclick="showSection('groups')">
-                + Create Group
-            </button>
+            <div class="topbar-actions">
+                <button class="topbar-btn" type="button" onclick="showSection('expenses')">+ Add Expense</button>
+                <button class="topbar-btn secondary" type="button" onclick="showSection('evidence')">📁 Upload Evidence</button>
+                <button class="topbar-btn ai-quick-btn" type="button" onclick="showSection('assistant')">✧ Ask AI</button>
+            </div>
         </header>
 
-        <section class="welcome-card">
-            <div>
-                <p class="eyebrow">WELCOME TO SPLITSMART</p>
-                <h2>Split expenses. Stay organized.</h2>
-                <p>Track group spending, calculate balances and simplify settlements.</p>
-            </div>
-            <div class="welcome-symbol">✧</div>
-        </section>
+        <!-- NOTIFICATION BANNER / TOAST -->
+        <div id="toastNotification" class="toast-notification hidden" role="alert"></div>
 
-        <section class="stats-grid">
-            <div class="stat-card">
-                <span>Total Groups</span>
-                <h2 id="totalGroups">0</h2>
-                <small>Your expense groups</small>
-            </div>
 
-            <div class="stat-card">
-                <span>Total Expenses</span>
-                <h2 id="totalExpenses">₹0</h2>
-                <small>Across your groups</small>
-            </div>
+        <!-- ============================================================== -->
+        <!-- 1. DASHBOARD SECTION -->
+        <!-- ============================================================== -->
+        <section class="page-section active" id="dashboard">
 
-            <div class="stat-card">
-                <span>Pending Settlements</span>
-                <h2 id="pendingSettlements">0</h2>
-                <small>Payments awaiting completion</small>
-            </div>
-
-            <div class="stat-card">
-                <span>Active Members</span>
-                <h2 id="totalMembers">0</h2>
-                <small>Across your groups</small>
-            </div>
-        </section>
-
-        <section id="groups" class="content-section">
-            <div class="section-heading">
-                <div>
-                    <h2>Your Groups</h2>
-                    <p>Manage your friends, roommates and travel groups.</p>
+            <div class="welcome-card">
+                <div class="welcome-content">
+                    <span class="welcome-tag">SPLITSMART AI 2.0</span>
+                    <h2>The Financial Memory<br>of Your Group.</h2>
+                    <p>
+                        From trips and shared apartments to weddings and campus events—upload receipts,
+                        track budgets, calculate exact member shares, and settle balances with digital payments.
+                    </p>
+                    <div class="hero-actions">
+                        <button class="hero-button" type="button" onclick="showSection('groups')">Manage Groups <span>→</span></button>
+                        <button class="hero-button-outline" type="button" onclick="showSection('evidence')">Upload Evidence</button>
+                    </div>
                 </div>
-                <button class="secondary-btn" onclick="loadDashboard()">Refresh</button>
+                <div class="welcome-decoration" aria-hidden="true">
+                    <div class="decoration-circle circle-one"></div>
+                    <div class="decoration-circle circle-two"></div>
+                    <div class="decoration-card">
+                        <span>GROUP MEMORY</span>
+                        <strong id="heroGroupLabel">Select a group</strong>
+                        <div class="decoration-bars">
+                            <i style="height:60%"></i><i style="height:85%"></i><i style="height:45%"></i><i style="height:100%"></i><i style="height:70%"></i>
+                        </div>
+                    </div>
+                    <div class="decoration-sparkle">✧</div>
+                </div>
             </div>
 
+            <!-- STATS KPI GRID -->
+            <div class="stats-grid">
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon icon-purple">◫</span>
+                        <span class="stat-caption">ACTIVE GROUPS</span>
+                    </div>
+                    <strong class="stat-value" id="dashTotalGroups">0</strong>
+                    <span class="stat-description">Managed activities</span>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon icon-blue">₹</span>
+                        <span class="stat-caption">TOTAL RECORDED SPEND</span>
+                    </div>
+                    <strong class="stat-value" id="dashTotalSpent">₹0.00</strong>
+                    <span class="stat-description" id="dashSpentSub">In selected group</span>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon icon-green">🎯</span>
+                        <span class="stat-caption">BUDGET STATUS</span>
+                    </div>
+                    <strong class="stat-value" id="dashBudgetRemaining">₹0.00</strong>
+                    <span class="stat-description" id="dashBudgetPct">0% consumed</span>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon icon-orange">⇄</span>
+                        <span class="stat-caption">PENDING SETTLEMENTS</span>
+                    </div>
+                    <strong class="stat-value" id="dashPendingSettlements">0</strong>
+                    <span class="stat-description" id="dashPendingAmount">₹0.00 unpaid</span>
+                </article>
+            </div>
+
+            <!-- DASHBOARD TWO-COLUMN: RECENT TIMELINE + GROUPS LIST -->
             <div class="two-column">
-
                 <div class="panel">
-                    <h3>Create a Group</h3>
-
-                    <form id="groupForm">
-                        <label>Group name</label>
-                        <input id="groupName" type="text"
-                            placeholder="e.g. College Friends" required>
-
-                        <label>Description</label>
-                        <textarea id="groupDescription"
-                            placeholder="Describe your group"></textarea>
-
-                        <button class="primary-btn full-width" type="submit">
-                            Create Group
-                        </button>
-                    </form>
-
-                    <p id="groupMessage" class="message"></p>
-                </div>
-
-                <div class="panel">
-                    <h3>Existing Groups</h3>
-                    <div id="groupsList">
-                        <p class="muted">Loading groups...</p>
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Recent Group Activity</h3>
+                            <p>Latest expenses, media uploads, and payments.</p>
+                        </div>
+                        <button class="secondary-button" type="button" onclick="loadDashboard()">↻ Refresh</button>
+                    </div>
+                    <div id="dashTimelineFeed" class="timeline-feed-compact">
+                        <div class="empty-state">Select a group to view recent activities.</div>
                     </div>
                 </div>
 
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>All Managed Groups</h3>
+                            <p>Choose an activity to view its financial memory.</p>
+                        </div>
+                        <button class="primary-button small-btn" type="button" onclick="showSection('groups')">+ New Group</button>
+                    </div>
+                    <div class="group-list" id="groupsList">
+                        <div class="empty-state">Loading your groups...</div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section id="expenses" class="content-section">
+
+        <!-- ============================================================== -->
+        <!-- 2. GROUPS & MEMBER MANAGEMENT -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="groups">
             <div class="section-heading">
                 <div>
+                    <span class="eyebrow">GROUP INTELLIGENCE</span>
+                    <h2>Group & Member Management</h2>
+                    <p>Configure any group activity—from roommates and trips to weddings and projects.</p>
+                </div>
+            </div>
+
+            <div class="two-column">
+                <!-- CREATE GROUP -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Create Group Activity</h3>
+                            <p>Define group activity type, schedule, and spending budget.</p>
+                        </div>
+                        <span class="panel-icon">＋</span>
+                    </div>
+
+                    <form id="groupCreateForm" class="form-stack" onsubmit="handleCreateGroup(event)">
+                        <div class="form-field">
+                            <label for="newGroupName">Group Name *</label>
+                            <input id="newGroupName" type="text" maxlength="100" placeholder="e.g. Goa Trip 2026, Flat 402 Rent, Tech Fest" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="newGroupActivity">Activity Type</label>
+                                <select id="newGroupActivity">
+                                    <option value="trip">Trip & Vacation</option>
+                                    <option value="roommates">Roommates & Shared Living</option>
+                                    <option value="family">Family Expenses</option>
+                                    <option value="wedding">Wedding & Celebrations</option>
+                                    <option value="event">College Event & Project</option>
+                                    <option value="club">Club & Sports</option>
+                                    <option value="purchase">Group Purchase</option>
+                                    <option value="general" selected>General Activity</option>
+                                </select>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="newGroupBudget">Target Budget (₹)</label>
+                                <input id="newGroupBudget" type="number" min="0" step="100" placeholder="e.g. 50000">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="newGroupStart">Start Date</label>
+                                <input id="newGroupStart" type="date">
+                            </div>
+                            <div class="form-field">
+                                <label for="newGroupEnd">End Date</label>
+                                <input id="newGroupEnd" type="date">
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="newGroupDesc">Description <span class="optional">(optional)</span></label>
+                            <textarea id="newGroupDesc" rows="2" maxlength="500" placeholder="e.g. Shared expenses for the upcoming graduation trip"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit" id="createGroupBtn">＋ Create Group Activity</button>
+                            <span class="form-message" id="createGroupMsg"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ADD MEMBERS -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Group Members</h3>
+                            <p>Manage members and their roles in the selected group.</p>
+                        </div>
+                        <span class="panel-icon">♙</span>
+                    </div>
+
+                    <form id="memberAddForm" class="form-stack" onsubmit="handleAddMember(event)">
+                        <div class="form-row">
+                            <div class="form-field" style="flex:2">
+                                <label for="newMemberName">Member Name *</label>
+                                <input id="newMemberName" type="text" maxlength="100" placeholder="e.g. Arun Kumar" required>
+                            </div>
+                            <div class="form-field" style="flex:1">
+                                <label for="newMemberRole">Role</label>
+                                <select id="newMemberRole">
+                                    <option value="member" selected>Member</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="owner">Owner</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="newMemberEmail">Email <span class="optional">(optional)</span></label>
+                                <input id="newMemberEmail" type="email" placeholder="arun@example.com">
+                            </div>
+                            <div class="form-field">
+                                <label for="newMemberPhone">Phone <span class="optional">(optional)</span></label>
+                                <input id="newMemberPhone" type="tel" placeholder="+91 98765 43210">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit" id="addMemberBtn">＋ Add Member</button>
+                            <span class="form-message" id="addMemberMsg"></span>
+                        </div>
+                    </form>
+
+                    <div class="member-roster" style="margin-top: 20px;">
+                        <h4>Current Members</h4>
+                        <div id="membersList" class="member-list">
+                            <div class="empty-state">Select a group to see members.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- 3. ACTIVITY TIMELINE -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="timeline">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">CHRONOLOGICAL FINANCIAL MEMORY</span>
+                    <h2>Group Activity Timeline</h2>
+                    <p>An intelligent chronological ledger connecting expenses, receipts, payments, and settlements.</p>
+                </div>
+                <button class="secondary-button" type="button" onclick="loadTimeline()">↻ Refresh Timeline</button>
+            </div>
+
+            <div class="panel">
+                <div class="timeline-filters">
+                    <span class="filter-label">Filter:</span>
+                    <button class="filter-pill active" onclick="filterTimeline('all', this)">All Events</button>
+                    <button class="filter-pill" onclick="filterTimeline('expense', this)">Expenses</button>
+                    <button class="filter-pill" onclick="filterTimeline('evidence', this)">Media & Evidence</button>
+                    <button class="filter-pill" onclick="filterTimeline('settlement', this)">Settlements</button>
+                    <button class="filter-pill" onclick="filterTimeline('payment_transaction', this)">PayPal</button>
+                </div>
+
+                <div id="timelineContainer" class="timeline-flow" style="margin-top: 20px;">
+                    <div class="empty-state">Select a group to view its timeline.</div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- 4. EXPENSE MANAGEMENT -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="expenses">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">ACCURATE COST SHARING</span>
                     <h2>Expense Management</h2>
-                    <p>Record and track shared expenses.</p>
+                    <p>Record shared expenses with equal, percentage, or custom fixed splitting.</p>
                 </div>
             </div>
 
-            <div class="panel">
-                <h3>Selected Group</h3>
+            <div class="two-column">
+                <!-- EXPENSE FORM -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Record New Expense</h3>
+                            <p>Enter details, select payer, and choose split allocation.</p>
+                        </div>
+                        <span class="panel-icon">↗</span>
+                    </div>
 
-                <select id="expenseGroup">
-                    <option value="">Select a group</option>
-                </select>
+                    <form id="expenseForm" class="form-stack" onsubmit="handleSaveExpense(event)">
+                        <div class="form-field">
+                            <label for="expDesc">Description *</label>
+                            <input id="expDesc" type="text" maxlength="300" placeholder="e.g. Dinner at Fisherman's Wharf, Petrol for SUV" required>
+                        </div>
 
-                <div id="expenseGroupInfo" class="muted">
-                    Select a group to view its expenses.
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="expAmount">Total Amount (₹) *</label>
+                                <input id="expAmount" type="number" step="0.01" min="0.01" placeholder="e.g. 2400.00" required oninput="onExpenseAmountOrSplitChange()">
+                            </div>
+                            <div class="form-field">
+                                <label for="expCategory">Category</label>
+                                <select id="expCategory">
+                                    <option value="Food & Dining">Food & Dining</option>
+                                    <option value="Transportation">Transportation</option>
+                                    <option value="Fuel">Fuel</option>
+                                    <option value="Accommodation">Accommodation</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Tickets & Events">Tickets & Events</option>
+                                    <option value="Bills & Utilities">Bills & Utilities</option>
+                                    <option value="General" selected>General</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="expPayer">Paid By *</label>
+                                <select id="expPayer" required>
+                                    <option value="">Select payer</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="expMerchant">Merchant / Place <span class="optional">(optional)</span></label>
+                                <input id="expMerchant" type="text" placeholder="e.g. Taj Hotel, Indian Oil">
+                            </div>
+                        </div>
+
+                        <!-- SPLIT TYPE TABS -->
+                        <div class="split-section">
+                            <label class="split-header-label">Split Method</label>
+                            <div class="split-type-toggle">
+                                <label class="radio-tab active">
+                                    <input type="radio" name="splitTypeRadio" value="equal" checked onchange="setSplitType('equal')">
+                                    Equal Split
+                                </label>
+                                <label class="radio-tab">
+                                    <input type="radio" name="splitTypeRadio" value="percentage" onchange="setSplitType('percentage')">
+                                    Percentage (%)
+                                </label>
+                                <label class="radio-tab">
+                                    <input type="radio" name="splitTypeRadio" value="custom" onchange="setSplitType('custom')">
+                                    Custom Share (₹)
+                                </label>
+                            </div>
+
+                            <!-- PARTICIPANTS PICKER -->
+                            <div class="participants-container">
+                                <div class="participants-header">
+                                    <span>Select Participants:</span>
+                                    <button type="button" class="text-btn" onclick="toggleAllParticipants(true)">Select All</button>
+                                </div>
+                                <div id="participantsList" class="participants-checkbox-list">
+                                    <div class="empty-state">Select a group to see members.</div>
+                                </div>
+                            </div>
+
+                            <!-- SPLIT SUMMARY / MATH FEEDBACK -->
+                            <div id="splitFeedback" class="split-feedback-box">
+                                Select participants to divide the expense.
+                            </div>
+                        </div>
+
+                        <!-- ATTACH EVIDENCE -->
+                        <div class="form-field">
+                            <label for="expEvidenceSelect">Link Uploaded Evidence / Receipt <span class="optional">(optional)</span></label>
+                            <select id="expEvidenceSelect">
+                                <option value="">No evidence attached</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit" id="saveExpenseBtn">＋ Save Expense</button>
+                            <span class="form-message" id="saveExpenseMsg"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- EXPENSE LIST -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Recorded Expenses</h3>
+                            <p>History of all shared expenses in this group.</p>
+                        </div>
+                        <div class="filter-dropdown">
+                            <select id="expenseCategoryFilter" onchange="loadExpenses()">
+                                <option value="">All Categories</option>
+                                <option value="Food & Dining">Food & Dining</option>
+                                <option value="Transportation">Transportation</option>
+                                <option value="Fuel">Fuel</option>
+                                <option value="Accommodation">Accommodation</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Tickets & Events">Tickets & Events</option>
+                                <option value="Bills & Utilities">Bills & Utilities</option>
+                                <option value="General">General</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="expensesHistoryList" class="expense-history-container">
+                        <div class="empty-state">Select a group to view expenses.</div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="assistant" class="content-section">
+
+        <!-- ============================================================== -->
+        <!-- 5. UPLOAD & EVIDENCE CENTRE -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="evidence">
             <div class="section-heading">
                 <div>
-                    <h2>AI Expense Assistant</h2>
-                    <p>Describe an expense in natural language.</p>
+                    <span class="eyebrow">CENTRALIZED INFORMATION COLLECTION</span>
+                    <h2>Upload & Evidence Centre</h2>
+                    <p>Collect receipts, bills, invoices, audio messages, videos, and WhatsApp chat exports in one place.</p>
                 </div>
-                <span class="ai-tag">✧ GEMINI AI</span>
             </div>
 
-            <div class="panel ai-panel">
-                <label>Select group</label>
-                <select id="aiGroup">
-                    <option value="">Select a group</option>
-                </select>
+            <!-- UPLOAD DROPZONE -->
+            <div class="panel upload-panel">
+                <div class="dropzone" id="fileDropzone" onclick="document.getElementById('evidenceFileInput').click()">
+                    <span class="dropzone-icon">📁</span>
+                    <h3>Drag & Drop Files Here, or Click to Browse</h3>
+                    <p class="dropzone-sub">
+                        Accepts: Receipts & Invoices (JPG, PNG, PDF) · Voice Notes (MP3, WAV, M4A) · Video Evidence (MP4) · WhatsApp Chat (.txt)
+                    </p>
+                    <input type="file" id="evidenceFileInput" style="display:none" onchange="handleFileSelected(event)" accept="image/*,.pdf,audio/*,video/*,.txt">
+                </div>
 
-                <label>Describe your expense</label>
-                <textarea id="aiText"
-                    placeholder="Example: I paid 900 rupees for dinner. Split equally between me, Arun and Rahul."
-                    rows="4"></textarea>
+                <div id="uploadSelectedPreview" class="upload-preview-area hidden">
+                    <div class="selected-file-info">
+                        <span id="previewFileName">filename.jpg</span>
+                        <span id="previewFileSize" class="file-size-badge">1.2 MB</span>
+                    </div>
 
-                <button class="primary-btn" id="aiButton" onclick="createAIExpense()">
-                    ✧ Analyze and Create Expense
-                </button>
+                    <div class="form-row" style="margin-top:12px;">
+                        <div class="form-field">
+                            <label for="evidenceUploader">Uploaded By</label>
+                            <select id="evidenceUploader">
+                                <option value="">Select Member</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="evidenceNotes">Notes / Description <span class="optional">(optional)</span></label>
+                            <input id="evidenceNotes" type="text" placeholder="e.g. Dinner bill for Day 2">
+                        </div>
+                    </div>
 
-                <div id="aiResult" class="message"></div>
+                    <div class="form-actions" style="margin-top:12px;">
+                        <button class="primary-button" id="startUploadBtn" type="button" onclick="executeUpload()">Upload & Analyze Evidence</button>
+                        <button class="secondary-button" type="button" onclick="cancelUploadSelection()">Cancel</button>
+                        <span id="uploadStatusMsg" class="form-message"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DRAFT REVIEW MODAL / CARD FOR EXTRACTED EVIDENCE -->
+            <div id="aiDraftReviewCard" class="panel draft-review-card hidden">
+                <div class="panel-heading">
+                    <div>
+                        <span class="status-pill status-suggested">AI Extraction Draft</span>
+                        <h3 id="draftTitle">Review Extracted Expense</h3>
+                        <p>Verify details extracted by AI before confirming into group financial history.</p>
+                    </div>
+                    <button class="close-card-btn" onclick="hideDraftReview()">✕</button>
+                </div>
+
+                <div id="duplicateAlertBox" class="duplicate-alert-banner hidden">
+                    ⚠️ <strong>Possible Duplicate Detected:</strong> <span id="dupAlertReason"></span>
+                </div>
+
+                <form id="draftConfirmForm" class="form-stack" onsubmit="handleConfirmDraft(event)">
+                    <input type="hidden" id="draftEvidenceId">
+                    <div class="form-row">
+                        <div class="form-field" style="flex:2">
+                            <label for="draftDesc">Description *</label>
+                            <input id="draftDesc" type="text" required>
+                        </div>
+                        <div class="form-field" style="flex:1">
+                            <label for="draftAmount">Amount (₹) *</label>
+                            <input id="draftAmount" type="number" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="draftPayer">Payer *</label>
+                            <select id="draftPayer" required></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="draftCategory">Category</label>
+                            <select id="draftCategory">
+                                <option value="Food & Dining">Food & Dining</option>
+                                <option value="Transportation">Transportation</option>
+                                <option value="Fuel">Fuel</option>
+                                <option value="Accommodation">Accommodation</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Tickets & Events">Tickets & Events</option>
+                                <option value="Bills & Utilities">Bills & Utilities</option>
+                                <option value="General">General</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Participants</label>
+                        <div id="draftParticipantsList" class="participants-checkbox-list"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="primary-button" type="submit" id="confirmDraftBtn">✓ Confirm and Save Expense</button>
+                        <button class="secondary-button" type="button" onclick="hideDraftReview()">Discard Draft</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- EVIDENCE GALLERY & LIST -->
+            <div class="panel" style="margin-top: 20px;">
+                <div class="panel-heading">
+                    <div>
+                        <h3>Uploaded Activity Evidence</h3>
+                        <p>All receipts, media, and records associated with this group activity.</p>
+                    </div>
+                    <button class="secondary-button" type="button" onclick="loadEvidenceList()">↻ Refresh Evidence</button>
+                </div>
+
+                <div id="evidenceGallery" class="evidence-grid">
+                    <div class="empty-state">Select a group to view uploaded evidence.</div>
+                </div>
             </div>
         </section>
 
-        <section id="settlements" class="content-section">
+
+        <!-- ============================================================== -->
+        <!-- 6. BUDGET & ANALYTICS -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="analytics">
             <div class="section-heading">
                 <div>
-                    <h2>Settlements</h2>
-                    <p>Understand who owes whom.</p>
+                    <span class="eyebrow">FINANCIAL INTELLIGENCE</span>
+                    <h2>Budget & Expense Analytics</h2>
+                    <p>Real-time spending analysis, budget burn monitoring, member contribution rankings, and explainable forecasts.</p>
+                </div>
+                <button class="secondary-button" type="button" onclick="loadAnalytics()">↻ Refresh Analytics</button>
+            </div>
+
+            <!-- BUDGET HEALTH BANNER -->
+            <div id="budgetHealthBanner" class="budget-alert-card safe">
+                <div class="budget-alert-icon">🎯</div>
+                <div class="budget-alert-info">
+                    <h3 id="budgetStatusHeading">Budget Status</h3>
+                    <p id="budgetStatusMsg">Loading budget analysis...</p>
+                    <div class="progress-bar-container">
+                        <div id="budgetProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="budget-alert-figures">
+                    <span class="figure-label">CONSUMED</span>
+                    <strong id="budgetConsumedText">0%</strong>
                 </div>
             </div>
 
-            <div class="panel">
-                <label>Select group</label>
-                <select id="settlementGroup">
-                    <option value="">Select a group</option>
-                </select>
+            <!-- TWO COLUMN: CATEGORY BREAKDOWN + FORECAST -->
+            <div class="two-column" style="margin-top: 20px;">
+                <!-- CATEGORY BREAKDOWN -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Category Spending</h3>
+                            <p>Visual allocation of group expenditure.</p>
+                        </div>
+                    </div>
+                    <div id="categoryBreakdownList" class="category-bars-list">
+                        <div class="empty-state">No category spending data yet.</div>
+                    </div>
+                </div>
 
-                <div id="balanceList" class="result-list">
-                    <p class="muted">Select a group to view balances.</p>
+                <!-- FORECAST CARD -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Explainable Spending Forecast</h3>
+                            <p>Projection based on activity duration and daily burn rate.</p>
+                        </div>
+                        <span class="panel-icon">📈</span>
+                    </div>
+
+                    <div class="forecast-content">
+                        <div class="forecast-metric-row">
+                            <div class="forecast-metric">
+                                <span class="metric-label">DAILY BURN RATE</span>
+                                <strong id="forecastDailyBurn" class="metric-val">₹0.00</strong>
+                            </div>
+                            <div class="forecast-metric">
+                                <span class="metric-label">ESTIMATED TOTAL</span>
+                                <strong id="forecastEstTotal" class="metric-val">₹0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="forecast-explanation-box" id="forecastExplanation">
+                            Insufficient activity records for forecast. Add expenses to generate explainable projection.
+                        </div>
+
+                        <div class="recommendations-box">
+                            <h4>Historical Activity Insights</h4>
+                            <div id="recommendationsList" class="recs-list">
+                                <div class="empty-state">Add expenses to receive activity insights.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MEMBER CONTRIBUTIONS TABLE -->
+            <div class="panel" style="margin-top: 20px;">
+                <div class="panel-heading">
+                    <div>
+                        <h3>Member Contributions & Balances</h3>
+                        <p>Total amount paid, individual consumption, and net standing per member.</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="contributionsTable">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Role</th>
+                                <th>Total Paid</th>
+                                <th>Share Owed</th>
+                                <th>Net Standing</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contributionsTableBody">
+                            <tr><td colspan="5" class="empty-state">Select a group to see contributions.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
 
-        <footer>
-            <p>SplitSmart AI © 2026 · Intelligent Group Expense Manager</p>
+
+        <!-- ============================================================== -->
+        <!-- 7. SETTLEMENTS -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="settlements">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">CLEAR OUTSTANDING BALANCES</span>
+                    <h2>Settlements & Debt Simplification</h2>
+                    <p>Calculate minimal transactions needed to clear all group debts with exact mathematical accuracy.</p>
+                </div>
+            </div>
+
+            <div class="two-column">
+                <!-- BALANCES & SUGGESTED PAYMENTS -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Member Net Balances</h3>
+                            <p>Positive balance: member receives money. Negative balance: member owes money.</p>
+                        </div>
+                        <span class="panel-icon">⚖</span>
+                    </div>
+                    <div id="settlementBalancesList" class="balance-list">
+                        <div class="empty-state">Select a group to view balances.</div>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <h4>Suggested Simplified Payments</h4>
+                        <p class="field-hint">Optimized to minimize the number of cross-member transactions.</p>
+                        <div id="suggestedPaymentsList" class="suggestions-list" style="margin-top: 10px;">
+                            <div class="empty-state">Everyone is settled!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTLEMENT HISTORY -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Settlement History</h3>
+                            <p>Recorded payments and verification status.</p>
+                        </div>
+                        <span class="panel-icon">◷</span>
+                    </div>
+                    <div id="settlementHistoryList" class="settlement-history-list">
+                        <div class="empty-state">No settlement payments recorded yet.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- 8. PAYPAL SANDBOX PAYMENTS -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="paypal">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">DIGITAL PAYMENT INTEGRATION</span>
+                    <h2>PayPal Sandbox Payments</h2>
+                    <p>Execute verified settlement payments using PayPal Orders v2 REST API in Sandbox mode.</p>
+                </div>
+            </div>
+
+            <!-- PAYPAL SANDBOX BANNER -->
+            <div class="sandbox-disclaimer-banner">
+                <span class="sandbox-badge">PAYPAL SANDBOX</span>
+                <div>
+                    <strong>Demonstration Sandbox Environment</strong>
+                    <p>Real-money transfers are not processed. Settlements convert at ₹85.00/USD to standard PayPal Sandbox currency.</p>
+                </div>
+            </div>
+
+            <div class="two-column" style="margin-top: 20px;">
+                <!-- INITIATE PAYMENT CARD -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Pay Pending Settlement</h3>
+                            <p>Select an outstanding debt and initiate verified PayPal checkout.</p>
+                        </div>
+                        <span class="panel-icon">💳</span>
+                    </div>
+
+                    <form id="paypalPayForm" class="form-stack" onsubmit="handleInitiatePayPal(event)">
+                        <div class="form-field">
+                            <label for="paypalSettlementSelect">Select Pending Settlement *</label>
+                            <select id="paypalSettlementSelect" required onchange="onPayPalSettlementSelected(this.value)">
+                                <option value="">Select a pending settlement</option>
+                            </select>
+                        </div>
+
+                        <div id="paypalSelectedDetails" class="paypal-calc-box hidden">
+                            <div class="calc-row">
+                                <span>Settlement Amount:</span>
+                                <strong id="paypalCalcINR">₹0.00</strong>
+                            </div>
+                            <div class="calc-row">
+                                <span>Sandbox USD Equivalent:</span>
+                                <strong id="paypalCalcUSD">$0.00 USD</strong>
+                            </div>
+                            <div class="calc-row text-muted">
+                                <span>Exchange Rate:</span>
+                                <span>1 USD = ₹85.00 INR</span>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="primary-button paypal-checkout-btn" type="submit" id="initiatePayPalBtn">
+                                <span>P</span> Checkout with PayPal Sandbox
+                            </button>
+                            <span id="paypalInitiateMsg" class="form-message"></span>
+                        </div>
+                    </form>
+
+                    <!-- PAYPAL ACTIVE ORDER BOX -->
+                    <div id="paypalActiveOrderBox" class="paypal-active-order-box hidden">
+                        <h4>Order Created: <span id="paypalActiveOrderId"></span></h4>
+                        <p>Click below to approve payment in the PayPal Sandbox buyer portal, then capture below:</p>
+
+                        <div class="paypal-action-row">
+                            <a id="paypalApprovalLink" href="#" target="_blank" class="primary-button">
+                                Open PayPal Sandbox Approval Window ↗
+                            </a>
+                        </div>
+
+                        <div class="capture-action-box" style="margin-top: 15px;">
+                            <button class="primary-button green-btn" type="button" id="capturePayPalBtn" onclick="handleCapturePayPal()">
+                                ✓ Capture Payment & Complete Settlement
+                            </button>
+                            <span id="capturePayPalMsg" class="form-message"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAYPAL TRANSACTIONS AUDIT -->
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>PayPal Transaction Ledger</h3>
+                            <p>Recorded PayPal Sandbox orders and captures.</p>
+                        </div>
+                        <button class="secondary-button" type="button" onclick="loadPayPalTransactions()">↻ Refresh</button>
+                    </div>
+
+                    <div id="paypalTransactionsList" class="paypal-tx-list">
+                        <div class="empty-state">No PayPal transactions in this group yet.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- 9. AI FINANCIAL ASSISTANT -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="assistant">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">DATABASE-GROUNDED INTELLIGENCE</span>
+                    <h2>AI Financial Assistant</h2>
+                    <p>Ask natural language questions about your group's financial memory. Grounded strictly in database records.</p>
+                </div>
+            </div>
+
+            <div class="ai-chat-shell">
+                <!-- QUICK PROMPT SUGGESTIONS -->
+                <div class="chat-quick-prompts">
+                    <span class="prompts-label">Ask:</span>
+                    <button class="prompt-chip" onclick="askQuickPrompt('How much have we spent so far?')">"How much have we spent?"</button>
+                    <button class="prompt-chip" onclick="askQuickPrompt('How much budget remains?')">"How much budget remains?"</button>
+                    <button class="prompt-chip" onclick="askQuickPrompt('Who paid the most in this group?')">"Who paid the most?"</button>
+                    <button class="prompt-chip" onclick="askQuickPrompt('Which expenses are unpaid or pending?')">"Which expenses are unpaid?"</button>
+                    <button class="prompt-chip" onclick="askQuickPrompt('What did we spend on food and dining?')">"Show food expenses"</button>
+                    <button class="prompt-chip" onclick="askQuickPrompt('What is the highest expense recorded?')">"What is the highest expense?"</button>
+                </div>
+
+                <!-- CHAT MESSAGE LOG -->
+                <div id="chatMessageLog" class="chat-log-container">
+                    <div class="chat-message assistant">
+                        <div class="chat-avatar">✧</div>
+                        <div class="chat-bubble">
+                            <strong>Hello! I am your SplitSmart Group Financial Assistant.</strong>
+                            <p>
+                                I can answer questions about who paid what, remaining budgets, outstanding balances,
+                                and category breakdowns. All my answers are grounded strictly in this group's database records.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHAT INPUT BAR -->
+                <div class="chat-input-bar">
+                    <textarea id="chatInput" rows="2" placeholder="Ask a question about this group's expenses, budget, or balances..." onkeydown="handleChatKeyDown(event)"></textarea>
+                    <button class="primary-button chat-send-btn" id="sendChatBtn" type="button" onclick="sendChatMessage()">
+                        <span>Send ↗</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
+        <!-- 10. DIAGNOSTICS & SETTINGS -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="settings">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">SYSTEM STATUS</span>
+                    <h2>Settings & Diagnostics</h2>
+                    <p>Verify API connections, environment settings, and application health.</p>
+                </div>
+            </div>
+
+            <div class="two-column">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Gemini AI Integration</h3>
+                            <p>Google Gemini Generative AI configuration status.</p>
+                        </div>
+                        <span class="panel-icon">✧</span>
+                    </div>
+
+                    <div id="geminiStatusCard" class="diag-card">
+                        <div class="diag-item">
+                            <span>Status:</span>
+                            <span id="geminiStatusBadge" class="status-pill status-confirmed">Checking...</span>
+                        </div>
+                        <div class="diag-item">
+                            <span>Model:</span>
+                            <strong id="geminiModelName">gemini-2.5-flash</strong>
+                        </div>
+                        <div class="diag-item">
+                            <span>Capabilities:</span>
+                            <span>Natural Language Parsing, OCR Vision, Audio Transcription, WhatsApp Processing, Grounded Q&A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>PayPal Sandbox Integration</h3>
+                            <p>PayPal Orders v2 Checkout configuration status.</p>
+                        </div>
+                        <span class="panel-icon">💳</span>
+                    </div>
+
+                    <div id="paypalStatusCard" class="diag-card">
+                        <div class="diag-item">
+                            <span>Status:</span>
+                            <span id="paypalStatusBadge" class="status-pill status-suggested">Checking...</span>
+                        </div>
+                        <div class="diag-item">
+                            <span>Environment:</span>
+                            <strong>Sandbox (api-m.sandbox.paypal.com)</strong>
+                        </div>
+                        <div class="diag-item">
+                            <span>Payment Flow:</span>
+                            <span>Orders v2 (OAuth 2.0 → Create Order → Buyer Approval → Backend Capture)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="page-footer">
+            <strong>SplitSmart AI 2.0</strong>
+            <span>"One Group. Any Activity. Every Expense Understood. Every Payment Accounted For."</span>
+            <span>FastAPI · SQLAlchemy · Google Gemini AI · PayPal Orders v2 · SQLite</span>
         </footer>
 
     </main>
 </div>
 
-<script src="/static/js/app.js"></script>
 </body>
 </html>

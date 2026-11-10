@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,9 +11,14 @@ class ExpenseCreate(BaseModel):
     description: str = Field(min_length=1, max_length=300)
     total_amount_paise: int = Field(gt=0)
     paid_by_member_id: int
-    split_type: str = Field(pattern="^(equal|custom)$")
+    split_type: str = Field(pattern="^(equal|custom|percentage)$")
     participant_ids: list[int] = Field(min_length=1)
     custom_shares: list[ExpenseShareCreate] | None = None
+    percentage_shares: dict[int, float] | None = None
+    category: str = Field(default="General", max_length=50)
+    merchant: str | None = Field(default=None, max_length=150)
+    expense_date: datetime | None = None
+    evidence_id: int | None = None
 
 
 class ExpenseShareResponse(BaseModel):
@@ -34,5 +38,9 @@ class ExpenseResponse(BaseModel):
     description: str
     total_amount_paise: int
     split_type: str
+    category: str = "General"
+    merchant: str | None = None
+    expense_date: datetime | None = None
     created_at: datetime
-    shares: list[ExpenseShareResponse]
+    shares: list[ExpenseShareResponse] = []
+    evidence_count: int = 0

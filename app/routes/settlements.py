@@ -1,19 +1,11 @@
-
 from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.database.database import get_db
 from app.database.models import Group, Member, Expense, Settlement
-from app.schemas.settlements import (
-    SettlementCreate,
-    SettlementResponse
-)
-from app.services.settlement_engine import (
-    calculate_member_balances,
-    simplify_debts
-)
+from app.schemas.settlements import SettlementCreate, SettlementResponse
+from app.services.settlement_engine import calculate_member_balances, simplify_debts
 
 
 router = APIRouter(
@@ -120,7 +112,8 @@ def create_settlement(
         to_member_id=data.to_member_id,
         amount_paise=data.amount_paise,
         status="pending",
-        payment_provider=data.payment_provider
+        payment_provider=data.payment_provider or "manual",
+        provider_reference=data.provider_reference
     )
 
     db.add(settlement)
@@ -151,30 +144,8 @@ def complete_settlement(
     if not settlement:
         raise HTTPException(404, "Settlement not found")
 
-    if settlement.status != "pending":
-        raise HTTPException(
-            400,
-            "Only pending settlements can be completed"
-        )
-
-    balances = get_group_balances(db, group_id)
-
-    sender_balance = balances.get(settlement.from_member_id, 0)
-    receiver_balance = balances.get(settlement.to_member_id, 0)
-
-    if sender_balance >= 0 or receiver_balance <= 0:
-        raise HTTPException(
-            400,
-            "These members do not have an outstanding debt in this direction"
-        )
-
-    allowed_amount = min(-sender_balance, receiver_balance)
-
-    if settlement.amount_paise > allowed_amount:
-        raise HTTPException(
-            400,
-            "Settlement amount exceeds the outstanding balance"
-        )
+    if settlement.status == "completed":
+        return settlement  # Already completed
 
     settlement.status = "completed"
     settlement.completed_at = datetime.now(timezone.utc)
@@ -191,14 +162,14 @@ def complete_settlement(
 )
 def get_settlement_history(
     group_id: int,
+    status_filter: str | None = Query(default=None, alias="status"),
     db: Session = Depends(get_db)
 ):
     if not db.get(Group, group_id):
         raise HTTPException(404, "Group not found")
 
-    return (
-        db.query(Settlement)
-        .filter(Settlement.group_id == group_id)
-        .order_by(Settlement.id.desc())
-        .all()
-    )
+    query = db.query(Settlement).filter(Settlement.group_id == group_id)
+    if status_filter:
+        query = query.filter(Settlement.status == status_filter)
+
+    return query.order_by(Settlement.id.desc()).all()
