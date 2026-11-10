@@ -837,7 +837,27 @@ async function deleteExpense(expenseId) {
 // --------------------------------------------------
 
 function handleFileSelected(event) {
-    const file = event.target.files[0];
+    setSelectedUploadFile(event.target.files[0]);
+}
+
+function handleDropzoneKeyDown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        document.getElementById("evidenceFileInput").click();
+    }
+}
+
+function handleFileDragOver(event) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function handleFileDrop(event) {
+    event.preventDefault();
+    setSelectedUploadFile(event.dataTransfer?.files?.[0]);
+}
+
+function setSelectedUploadFile(file) {
     if (!file) return;
     selectedUploadFile = file;
 

@@ -512,9 +512,13 @@
 
             <!-- UPLOAD DROPZONE -->
             <div class="panel upload-panel">
-                <div class="dropzone" id="fileDropzone" onclick="document.getElementById('evidenceFileInput').click()">
+                <div class="dropzone" id="fileDropzone" role="button" tabindex="0" aria-label="Choose a file or drop it here"
+                     onclick="document.getElementById('evidenceFileInput').click()"
+                     onkeydown="handleDropzoneKeyDown(event)"
+                     ondragover="handleFileDragOver(event)"
+                     ondrop="handleFileDrop(event)">
                     <span class="dropzone-icon">📁</span>
-                    <h3>Drag & Drop Files Here, or Click to Browse</h3>
+                    <h3>Drag & Drop a File Here, or Click to Browse</h3>
                     <p class="dropzone-sub">
                         Accepts: Receipts & Invoices (JPG, PNG, PDF) · Voice Notes (MP3, WAV, M4A) · Video Evidence (MP4) · WhatsApp Chat (.txt)
                     </p>
@@ -854,7 +858,7 @@
                         <p>Click below to approve payment in the PayPal Sandbox buyer portal, then capture below:</p>
 
                         <div class="paypal-action-row">
-                            <a id="paypalApprovalLink" href="#" target="_blank" class="primary-button">
+                            <a id="paypalApprovalLink" href="#" target="_blank" rel="noopener noreferrer" class="primary-button">
                                 Open PayPal Sandbox Approval Window ↗
                             </a>
                         </div>
@@ -875,7 +879,7 @@
                             <h3>PayPal Transaction Ledger</h3>
                             <p>Recorded PayPal Sandbox orders and captures.</p>
                         </div>
-                        <button class="secondary-button" type="button" onclick="loadPayPalTransactions()">↻ Refresh</button>
+                        <button class="secondary-button" type="button" onclick="loadPayPalModule()">↻ Refresh</button>
                     </div>
 
                     <div id="paypalTransactionsList" class="paypal-tx-list">
