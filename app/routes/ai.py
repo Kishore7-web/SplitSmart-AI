@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.database.database import get_db
 from app.database.models import Group, Member, Expense, ExpenseShare, ExpenseEvidence, AIConversationLog
 from app.schemas.ai import (

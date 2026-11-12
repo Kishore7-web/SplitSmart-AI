@@ -30,3 +30,5 @@ Thumbs.db
 
 # Database backups
 *.db.bak
+*.db.bak*
+*backup*.db
