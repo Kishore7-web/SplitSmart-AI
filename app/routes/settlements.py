@@ -297,9 +297,6 @@ def cancel_settlement(
 
     check_group_permission(db, group_id, user, "manage_settlements")
 
-    if settlement.status == "completed":
-        raise HTTPException(400, "Cannot cancel an already completed settlement. Record a counter-settlement if needed.")
-
     settlement.status = "cancelled"
     settlement.updated_at = datetime.now(timezone.utc)
 
@@ -307,6 +304,35 @@ def cancel_settlement(
     db.refresh(settlement)
 
     return to_settlement_response(settlement, db)
+
+
+@router.delete(
+    "/{settlement_id}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_settlement(
+    group_id: int,
+    settlement_id: int,
+    user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    settlement = (
+        db.query(Settlement)
+        .filter(
+            Settlement.id == settlement_id,
+            Settlement.group_id == group_id
+        )
+        .first()
+    )
+
+    if not settlement:
+        raise HTTPException(404, "Settlement not found")
+
+    check_group_permission(db, group_id, user, "manage_settlements")
+
+    db.delete(settlement)
+    db.commit()
+    return None
 
 
 @router.get(

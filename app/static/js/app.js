@@ -2140,8 +2140,10 @@ async function loadSettlements() {
                             ${!isCompleted && !isCancelled ? `
                                 <button class="secondary-button small-btn" onclick="completeSettlement(${st.id})">Mark Completed</button>
                                 <button class="secondary-button small-btn" onclick="selectPayPalSettlement(${st.id})">Pay via PayPal</button>
-                                <button class="text-btn danger-btn small-btn" onclick="cancelSettlement(${st.id})">Cancel</button>
-                            ` : ''}
+                                <button class="text-btn danger-btn small-btn" onclick="cancelSettlement(${st.id})">✕ Cancel</button>
+                            ` : `
+                                <button class="text-btn danger-btn small-btn" onclick="deleteSettlement(${st.id})">✕ Delete</button>
+                            `}
                         </div>
                     `;
                     historyContainer.appendChild(row);
@@ -2233,6 +2235,29 @@ async function cancelSettlement(settlementId) {
     } catch (err) {
         showToast("Error cancelling settlement: " + err.message, "error");
     }
+}
+
+async function deleteSettlement(settlementId) {
+    if (!confirm("Are you sure you want to delete this settlement record?")) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/settlements/${settlementId}`, { method: "DELETE" });
+        showToast("Settlement removed.", "success");
+        await loadSettlements();
+        await loadDashboard();
+    } catch (err) {
+        showToast("Error deleting settlement: " + err.message, "error");
+    }
+}
+
+function cancelPayPalOrderFlow() {
+    activePayPalOrderId = null;
+    const box = document.getElementById("paypalActiveOrderBox");
+    if (box) box.classList.add("hidden");
+    const initBtn = document.getElementById("initiatePayPalBtn");
+    if (initBtn) initBtn.disabled = false;
+    const msg = document.getElementById("paypalInitiateMsg");
+    if (msg) msg.textContent = "";
+    showToast("PayPal settlement flow cancelled.", "info");
 }
 
 function selectPayPalSettlement(settlementId) {
@@ -2512,6 +2537,35 @@ function askQuickPrompt(promptText) {
         input.value = promptText;
         sendChatMessage();
     }
+}
+
+async function clearAIChat() {
+    const log = document.getElementById("chatMessageLog");
+    if (log) {
+        log.innerHTML = `
+            <div class="chat-message assistant">
+                <div class="chat-avatar">✧</div>
+                <div class="chat-bubble">
+                    <strong>Hello! I am your SplitSmart Group Financial Assistant.</strong>
+                    <p>
+                        I can answer questions about who paid what, remaining budgets, outstanding balances,
+                        and category breakdowns. All my answers are grounded strictly in this group's database records.
+                    </p>
+                </div>
+            </div>
+        `;
+    }
+    const input = document.getElementById("chatInput");
+    if (input) input.value = "";
+
+    if (currentGroupId) {
+        try {
+            await apiRequest(`/api/ai/chat/${currentGroupId}`, { method: "DELETE" });
+        } catch (e) {
+            console.warn("Server chat history clear warning:", e);
+        }
+    }
+    showToast("Chat history cleared!", "info");
 }
 
 function handleChatKeyDown(e) {

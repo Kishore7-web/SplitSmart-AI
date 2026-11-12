@@ -454,6 +454,16 @@ def chat_with_financial_assistant(
         raise HTTPException(500, f"Assistant error: {str(exc)}")
 
 
+@router.delete("/chat/{group_id}", status_code=status.HTTP_200_OK)
+def clear_chat_history(
+    group_id: int,
+    db: Session = Depends(get_db)
+):
+    db.query(AIConversationLog).filter(AIConversationLog.group_id == group_id).delete()
+    db.commit()
+    return {"success": True, "message": "Chat history cleared."}
+
+
 @router.get("/status")
 def get_ai_status():
     return {

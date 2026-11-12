@@ -1018,9 +1018,12 @@
                             </a>
                         </div>
 
-                        <div class="capture-action-box" style="margin-top: 15px;">
+                        <div class="capture-action-box" style="margin-top: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <button class="primary-button green-btn" type="button" id="capturePayPalBtn" onclick="handleCapturePayPal()">
                                 ✓ Capture Payment & Complete Settlement
+                            </button>
+                            <button class="secondary-button" type="button" onclick="cancelPayPalOrderFlow()">
+                                ✕ Cancel Flow
                             </button>
                             <span id="capturePayPalMsg" class="form-message"></span>
                         </div>
@@ -1049,12 +1052,15 @@
         <!-- 9. AI FINANCIAL ASSISTANT -->
         <!-- ============================================================== -->
         <section class="page-section" id="assistant">
-            <div class="section-heading">
+            <div class="section-heading" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
                 <div>
                     <span class="eyebrow">DATABASE-GROUNDED INTELLIGENCE</span>
                     <h2>AI Financial Assistant</h2>
                     <p>Ask natural language questions about your group's financial memory. Grounded strictly in database records.</p>
                 </div>
+                <button class="secondary-button" type="button" onclick="clearAIChat()" style="white-space: nowrap; padding: 8px 14px; font-size: 13px;">
+                    🗑️ Clear Chat History
+                </button>
             </div>
 
             <div class="ai-chat-shell">
