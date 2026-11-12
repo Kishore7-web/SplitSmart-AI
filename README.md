@@ -5,6 +5,7 @@
 [![Gemini](https://img.shields.io/badge/Google%20Gemini-Multimodal%202.5-4285F4.svg)](https://ai.google.dev/)
 [![PayPal Sandbox](https://img.shields.io/badge/PayPal-Orders%20v2%20REST-003087.svg)](https://developer.paypal.com/)
 [![Tests Passing](https://img.shields.io/badge/tests-27%2F27%20passing-brightgreen.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **"The Financial Memory of a Group"**
 > SplitSmart is an intelligent group activity management and financial intelligence platform. It tracks, organizes, analyzes, and manages group financial activities from kickoff to final settlement—connecting people, activities, expenses, receipts, payment proofs, budgets, and digital settlements into an audit-ready financial history.
@@ -274,4 +275,6 @@ The assistant builds a strict database ground truth context from the active SQLi
 
 ## 📄 License & Academic Notice
 
-SplitSmart is developed as an educational software engineering and AI systems demonstration project. Built with ❤️ by the SplitSmart Team.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for complete details.
+
+SplitSmart is developed as an educational software engineering and AI systems demonstration project. Built with ❤️ by Kishore (`Kishore7-web`).
