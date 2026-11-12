@@ -247,6 +247,8 @@ async function onGlobalGroupChange(newId) {
 async function onActiveGroupChanged() {
     if (!currentGroupId) return;
 
+    resetAIChatUI();
+
     // Load group members, activities & core data
     await Promise.all([
         loadGroupMembers(),
@@ -2524,6 +2526,18 @@ function appendChatMessage(sender, text, sources = []) {
         bubble.appendChild(srcTag);
     }
 
+    // Individual delete button for the message
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.title = "Delete this message";
+    delBtn.innerHTML = "✕";
+    delBtn.className = "chat-msg-del-btn";
+    delBtn.onclick = (e) => {
+        e.stopPropagation();
+        msgEl.remove();
+    };
+    bubble.appendChild(delBtn);
+
     msgEl.appendChild(avatar);
     msgEl.appendChild(bubble);
 
@@ -2539,25 +2553,28 @@ function askQuickPrompt(promptText) {
     }
 }
 
-async function clearAIChat() {
+function resetAIChatUI() {
     const log = document.getElementById("chatMessageLog");
-    if (log) {
-        log.innerHTML = `
-            <div class="chat-message assistant">
-                <div class="chat-avatar">✧</div>
-                <div class="chat-bubble">
-                    <strong>Hello! I am your SplitSmart Group Financial Assistant.</strong>
-                    <p>
-                        I can answer questions about who paid what, remaining budgets, outstanding balances,
-                        and category breakdowns. All my answers are grounded strictly in this group's database records.
-                    </p>
-                </div>
+    if (!log) return;
+    const groupName = (allGroups.find(g => g.id === Number(currentGroupId))?.name) || "your group";
+    log.innerHTML = `
+        <div class="chat-message assistant">
+            <div class="chat-avatar">✧</div>
+            <div class="chat-bubble">
+                <strong>Hello! I am your SplitSmart Group Financial Assistant.</strong>
+                <p>
+                    I can answer questions about who paid what, remaining budgets, outstanding balances,
+                    and category breakdowns for <strong>${groupName}</strong>. All my answers are grounded strictly in this group's database records.
+                </p>
             </div>
-        `;
-    }
+        </div>
+    `;
     const input = document.getElementById("chatInput");
     if (input) input.value = "";
+}
 
+async function clearAIChat() {
+    resetAIChatUI();
     if (currentGroupId) {
         try {
             await apiRequest(`/api/ai/chat/${currentGroupId}`, { method: "DELETE" });

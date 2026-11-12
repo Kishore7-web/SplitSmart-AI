@@ -121,6 +121,39 @@ def run_migrations():
             if 'updated_at' not in settlement_cols:
                 cur.execute("ALTER TABLE settlements ADD COLUMN updated_at DATETIME")
 
+            settle_sql_row = cur.execute("SELECT sql FROM sqlite_master WHERE name='settlements'").fetchone()
+            if settle_sql_row and "cancelled" not in (settle_sql_row[0] or ""):
+                cur.execute("PRAGMA foreign_keys=off;")
+                cur.execute("ALTER TABLE settlements RENAME TO _settlements_old;")
+                cur.execute("""
+                    CREATE TABLE settlements (
+                        id INTEGER NOT NULL, 
+                        group_id INTEGER NOT NULL, 
+                        from_member_id INTEGER NOT NULL, 
+                        to_member_id INTEGER NOT NULL, 
+                        amount_paise INTEGER NOT NULL, 
+                        status VARCHAR(20) NOT NULL, 
+                        payment_provider VARCHAR(50), 
+                        provider_reference VARCHAR(200), 
+                        created_at DATETIME NOT NULL, 
+                        completed_at DATETIME, 
+                        notes VARCHAR(500), 
+                        parent_settlement_id INTEGER, 
+                        verified_by_member_id INTEGER, 
+                        updated_at DATETIME, 
+                        PRIMARY KEY (id), 
+                        CONSTRAINT check_settlement_amount_positive CHECK (amount_paise > 0), 
+                        CONSTRAINT check_different_settlement_members CHECK (from_member_id != to_member_id), 
+                        CONSTRAINT check_settlement_status CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')), 
+                        FOREIGN KEY(group_id) REFERENCES groups (id) ON DELETE CASCADE, 
+                        FOREIGN KEY(from_member_id) REFERENCES members (id), 
+                        FOREIGN KEY(to_member_id) REFERENCES members (id)
+                    );
+                """)
+                cur.execute("INSERT INTO settlements SELECT * FROM _settlements_old;")
+                cur.execute("DROP TABLE _settlements_old;")
+                cur.execute("PRAGMA foreign_keys=on;")
+
         # 5. Expense evidences table migrations
         evidence_cols = get_columns('expense_evidences')
         if evidence_cols:
