@@ -50,16 +50,20 @@ class AIChatResponse(BaseModel):
 
 
 class AIGroupProposalRequest(BaseModel):
-    description: str = Field(min_length=5, max_length=4000)
+    description: str | None = None
+    prompt: str | None = None
+    text: str | None = None
 
 
 class AIGroupRefineRequest(BaseModel):
     current_proposal: dict[str, Any]
-    instruction: str = Field(min_length=2, max_length=1000)
+    instruction: str | None = None
+    prompt: str | None = None
 
 
 class AIGroupConfirmRequest(BaseModel):
-    structure: dict[str, Any]
+    structure: dict[str, Any] | None = None
+    proposal: dict[str, Any] | None = None
 
 
 class AIToolExecuteRequest(BaseModel):

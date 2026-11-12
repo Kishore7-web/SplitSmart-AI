@@ -657,12 +657,12 @@ async function handleAIProposeGroup() {
     showMessage(msg, "Gemini AI is structuring your group, activities, and budgets...", "normal");
 
     try {
-        const proposal = await apiRequest("/api/ai/propose-group", {
+        const res = await apiRequest("/api/ai/propose-group", {
             method: "POST",
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ prompt: prompt, description: prompt })
         });
 
-        activeAIProposal = proposal;
+        activeAIProposal = res.proposal || res;
         renderAIProposal(activeAIProposal);
 
         const previewCard = document.getElementById("aiProposalPreview");
@@ -690,7 +690,8 @@ function renderAIProposal(proposal) {
     const list = document.getElementById("propActivitiesList");
 
     if (nameInput) nameInput.value = proposal.group_name || "";
-    if (budgetInput) budgetInput.value = proposal.budget_paise > 0 ? (proposal.budget_paise / 100).toFixed(0) : "";
+    const totalPaise = proposal.budget_paise || (proposal.overall_budget_rupees ? Math.round(parseFloat(proposal.overall_budget_rupees) * 100) : 0);
+    if (budgetInput) budgetInput.value = totalPaise > 0 ? (totalPaise / 100).toFixed(0) : "";
 
     if (list) {
         list.innerHTML = "";
@@ -701,7 +702,8 @@ function renderAIProposal(proposal) {
             activities.forEach(act => {
                 const chip = document.createElement("div");
                 chip.className = "activity-chip";
-                const bStr = act.budget_paise > 0 ? ` · ${formatMoney(act.budget_paise)}` : "";
+                const actPaise = act.budget_paise || (act.budget_rupees ? Math.round(parseFloat(act.budget_rupees) * 100) : 0);
+                const bStr = actPaise > 0 ? ` · ${formatMoney(actPaise)}` : "";
                 chip.innerHTML = `<strong>${act.name}</strong>${bStr}<br><span style="font-size:11px;color:var(--muted)">${act.description || ''}</span>`;
                 list.appendChild(chip);
             });
@@ -723,15 +725,16 @@ async function handleAIRefineGroup() {
 
     showToast("Refining structure with Gemini...", "normal");
     try {
-        const refined = await apiRequest("/api/ai/refine-group-proposal", {
+        const res = await apiRequest("/api/ai/refine-group-proposal", {
             method: "POST",
             body: JSON.stringify({
+                instruction: refinePrompt,
                 prompt: refinePrompt,
                 current_proposal: activeAIProposal
             })
         });
 
-        activeAIProposal = refined;
+        activeAIProposal = res.proposal || res;
         renderAIProposal(activeAIProposal);
         if (refineInput) refineInput.value = "";
         showToast("Group structure refined!", "success");
@@ -751,13 +754,17 @@ async function handleAIConfirmGroup() {
     }
     if (budgetInput && budgetInput.value) {
         activeAIProposal.budget_paise = Math.round(Number(budgetInput.value) * 100);
+        activeAIProposal.overall_budget_rupees = Number(budgetInput.value).toFixed(2);
     }
 
     showToast("Creating group records in database...", "normal");
     try {
         const newGroup = await apiRequest("/api/ai/confirm-group-creation", {
             method: "POST",
-            body: JSON.stringify({ proposal: activeAIProposal })
+            body: JSON.stringify({
+                structure: activeAIProposal,
+                proposal: activeAIProposal
+            })
         });
 
         showToast(`Group "${newGroup.name}" created with custom activities!`, "success");

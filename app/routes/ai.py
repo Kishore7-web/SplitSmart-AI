@@ -54,8 +54,28 @@ def propose_group_from_description(
     Step 1: User describes group requirements in natural language.
     Gemini produces structured group information (activities, budgets, categories, members).
     """
+    desc = req.description or req.prompt or req.text or ""
+    if not desc.strip():
+        raise HTTPException(400, "Please provide a description or prompt for the group.")
     try:
-        proposal = generate_group_proposal(req.description)
+        proposal = generate_group_proposal(desc.strip())
+        # Ensure budget_paise is populated if overall_budget_rupees is present
+        if "overall_budget_rupees" in proposal and "budget_paise" not in proposal:
+            try:
+                proposal["budget_paise"] = int(float(str(proposal["overall_budget_rupees"]).replace(",", "")) * 100)
+            except Exception:
+                proposal["budget_paise"] = 0
+        elif "budget_paise" in proposal and "overall_budget_rupees" not in proposal:
+            proposal["overall_budget_rupees"] = f"{proposal['budget_paise'] / 100:.2f}"
+
+        # Ensure activities have budget_paise
+        for act in proposal.get("activities", []):
+            if "budget_rupees" in act and "budget_paise" not in act:
+                try:
+                    act["budget_paise"] = int(float(str(act["budget_rupees"]).replace(",", "")) * 100)
+                except Exception:
+                    act["budget_paise"] = 0
+
         return {
             "success": True,
             "proposal": proposal,
@@ -74,8 +94,23 @@ def refine_group_proposal_endpoint(
     Step 2: User provides follow-up modifications (e.g. 'Add photography activity', 'Allocate ₹4,000').
     Updates the proposed structure in real-time.
     """
+    instruction = req.instruction or req.prompt or ""
+    if not instruction.strip():
+        raise HTTPException(400, "Please provide refinement instructions.")
     try:
-        updated = refine_group_proposal(req.current_proposal, req.instruction)
+        updated = refine_group_proposal(req.current_proposal, instruction.strip())
+        if "overall_budget_rupees" in updated and "budget_paise" not in updated:
+            try:
+                updated["budget_paise"] = int(float(str(updated["overall_budget_rupees"]).replace(",", "")) * 100)
+            except Exception:
+                updated["budget_paise"] = 0
+        for act in updated.get("activities", []):
+            if "budget_rupees" in act and "budget_paise" not in act:
+                try:
+                    act["budget_paise"] = int(float(str(act["budget_rupees"]).replace(",", "")) * 100)
+                except Exception:
+                    act["budget_paise"] = 0
+
         return {
             "success": True,
             "proposal": updated,
@@ -95,8 +130,11 @@ def confirm_group_creation(
     Step 3: User confirms the proposed structure.
     Backend persists real database records: Group, Activities, Members, Custom Categories, Custom Fields.
     """
+    structure = req.structure or req.proposal or {}
+    if not structure:
+        raise HTTPException(400, "No group structure provided to confirm.")
     try:
-        return persist_group_structure(db, req.structure, user=user)
+        return persist_group_structure(db, structure, user=user)
     except Exception as exc:
         db.rollback()
         raise HTTPException(500, f"Failed to create group from proposal: {str(exc)}")
