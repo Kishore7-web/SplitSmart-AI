@@ -1291,6 +1291,117 @@ function onExpenseAmountOrSplitChange() {
     }
 }
 
+async function handleAIParseExpense() {
+    if (!currentGroupId) {
+        showToast("Please select or create a group first.", "error");
+        return;
+    }
+    const input = document.getElementById("aiExpenseInput");
+    const text = input ? input.value.trim() : "";
+    const msg = document.getElementById("aiExpenseMsg");
+    const btn = document.getElementById("aiExpenseBtn");
+
+    if (!text) {
+        showToast("Please describe the expense in plain English first.", "error");
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "✨ Parsing...";
+    }
+    if (msg) {
+        msg.style.display = "block";
+        msg.style.color = "#7c3aed";
+        msg.textContent = "AI is analyzing expense, payer, and split allocations...";
+    }
+
+    try {
+        const res = await apiRequest("/api/ai/parse-expense", {
+            method: "POST",
+            body: JSON.stringify({
+                group_id: currentGroupId,
+                text: text
+            })
+        });
+
+        // 1. Fill Description
+        if (res.description) {
+            const descEl = document.getElementById("expDesc");
+            if (descEl) descEl.value = res.description;
+        }
+
+        // 2. Fill Amount
+        const amountPaise = res.amount_paise || res.total_amount_paise;
+        if (amountPaise) {
+            const amtEl = document.getElementById("expAmount");
+            if (amtEl) amtEl.value = (amountPaise / 100).toFixed(2);
+        }
+
+        // 3. Fill Category
+        if (res.category) {
+            const catEl = document.getElementById("expCategory");
+            if (catEl) {
+                let found = false;
+                for (let i = 0; i < catEl.options.length; i++) {
+                    if (catEl.options[i].value.toLowerCase() === res.category.toLowerCase()) {
+                        catEl.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    const opt = document.createElement("option");
+                    opt.value = res.category;
+                    opt.textContent = res.category;
+                    opt.selected = true;
+                    catEl.appendChild(opt);
+                }
+            }
+        }
+
+        // 4. Fill Payer
+        if (res.paid_by_member_id) {
+            const payerEl = document.getElementById("expPayer");
+            if (payerEl) payerEl.value = res.paid_by_member_id;
+        }
+
+        // 5. Fill Merchant
+        if (res.merchant) {
+            const merchEl = document.getElementById("expMerchant");
+            if (merchEl) merchEl.value = res.merchant;
+        }
+
+        // 6. Select Participants
+        if (Array.isArray(res.participant_ids) && res.participant_ids.length > 0) {
+            document.querySelectorAll('#participantsList input[type="checkbox"]').forEach(cb => {
+                cb.checked = res.participant_ids.includes(Number(cb.dataset.memberId));
+            });
+        }
+
+        // 7. Update math & split feedback
+        onExpenseAmountOrSplitChange();
+
+        if (msg) {
+            msg.style.color = "#15803d";
+            msg.textContent = "✓ Parsed successfully! Review the fields below and click 'Save Expense'.";
+        }
+        showToast("Expense parsed and populated by AI!", "success");
+
+    } catch (err) {
+        if (msg) {
+            msg.style.color = "#b91c1c";
+            msg.textContent = "Could not parse: " + err.message;
+        }
+        showToast("AI parse failed: " + err.message, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "✨ Parse with AI";
+        }
+    }
+}
+
 async function handleSaveExpense(e) {
     e.preventDefault();
     if (!currentGroupId) return;

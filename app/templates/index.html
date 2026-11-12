@@ -505,6 +505,22 @@
                         <span class="panel-icon">↗</span>
                     </div>
 
+                    <!-- AI NATURAL LANGUAGE EXPENSE ASSISTANT -->
+                    <div class="ai-group-card" style="margin-bottom: 20px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1.5px solid #a78bfa; border-radius: 12px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="font-size: 18px; color: #7c3aed;">✨</span>
+                            <strong style="color: #5b21b6; font-size: 14px;">AI Quick Expense (Natural Language)</strong>
+                        </div>
+                        <p style="font-size: 12px; color: #6b21a8; margin-bottom: 10px;">
+                            Type in plain English — Gemini AI will automatically extract description, amount, payer, and fill the form below!
+                        </p>
+                        <div style="display: flex; gap: 8px;">
+                            <input id="aiExpenseInput" type="text" placeholder="e.g. Organiser paid ₹4500 for Sound & Speaker Rental split equally" style="flex: 1; padding: 10px 14px; border: 1px solid #c4b5fd; border-radius: 8px; font-size: 13px; background: #ffffff;" onkeydown="if(event.key==='Enter'){event.preventDefault();handleAIParseExpense();}">
+                            <button id="aiExpenseBtn" type="button" class="btn" style="background: #7c3aed; color: white; border: none; border-radius: 8px; padding: 0 16px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;" onclick="handleAIParseExpense()">✨ Parse with AI</button>
+                        </div>
+                        <div id="aiExpenseMsg" style="font-size: 12px; margin-top: 8px; display: none;"></div>
+                    </div>
+
                     <form id="expenseForm" class="form-stack" onsubmit="handleSaveExpense(event)">
                         <div class="form-field">
                             <label for="expDesc">Description *</label>
