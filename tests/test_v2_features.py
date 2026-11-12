@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi import HTTPException
 
-from app.database.database import SessionLocal
+# Isolated test db fixture provided by conftest.py
 from app.database.models import Group, Member, Expense, ExpenseShare, Settlement, ExpenseEvidence, PaymentTransaction
 from app.schemas.groups import GroupCreate
 from app.schemas.members import MemberCreate
@@ -37,13 +37,7 @@ from app.services.ai_service import parse_expense_with_ai, answer_financial_quer
 from app.services.paypal_service import convert_paise_to_usd, is_paypal_configured
 
 
-@pytest.fixture
-def db():
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
+# (Isolated db fixture is loaded automatically from conftest.py)
 
 
 # ---------------------------------------------------------------------------

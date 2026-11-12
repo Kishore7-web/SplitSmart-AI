@@ -84,6 +84,7 @@ async def upload_evidence(
     group_id: int,
     file: UploadFile = File(...),
     uploaded_by_member_id: int | None = Form(default=None),
+    activity_id: int | None = Form(default=None),
     notes: str | None = Form(default=None),
     db: Session = Depends(get_db)
 ):
@@ -190,6 +191,7 @@ async def upload_evidence(
 
     evidence = ExpenseEvidence(
         group_id=group_id,
+        activity_id=activity_id,
         uploaded_by_member_id=uploaded_by_member_id,
         filename=sanitized_name,
         stored_filename=unique_stored_name,
@@ -320,6 +322,67 @@ def check_duplicates_for_evidence(
     )
 
     return DuplicateCheckResponse(**report)
+
+
+@router.post("/{evidence_id}/retry", response_model=EvidenceResponse)
+def retry_evidence_processing(
+    group_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db)
+):
+    evidence = db.query(ExpenseEvidence).filter(
+        ExpenseEvidence.id == evidence_id,
+        ExpenseEvidence.group_id == group_id
+    ).first()
+    if not evidence:
+        raise HTTPException(404, "Evidence not found")
+
+    file_path = os.path.join(settings.upload_dir, evidence.stored_filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(404, "Stored file missing from server.")
+
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
+    members = db.query(Member).filter(Member.group_id == group_id).all()
+    member_names = [m.name for m in members]
+
+    extracted_dict = {}
+    proc_status = "processed"
+
+    try:
+        if evidence.file_type in ("image", "pdf"):
+            extracted_dict = extract_receipt_information(
+                file_bytes,
+                evidence.mime_type or "image/jpeg",
+                evidence.filename
+            )
+        elif evidence.file_type == "audio":
+            extracted_dict = extract_audio_expense(
+                file_bytes,
+                evidence.mime_type or "audio/mpeg",
+                member_names
+            )
+        elif evidence.file_type == "whatsapp_export":
+            text_str = file_bytes.decode("utf-8", errors="ignore")
+            candidates = parse_whatsapp_chat(text_str, member_names)
+            extracted_dict = {
+                "chat_candidates": candidates,
+                "candidate_count": len(candidates),
+                "notes": f"Identified {len(candidates)} potential expense messages from chat export."
+            }
+        else:
+            extracted_dict = {"notes": f"File type '{evidence.file_type}' re-verified."}
+    except Exception as exc:
+        proc_status = "failed"
+        extracted_dict = {"extraction_error": str(exc)}
+
+    evidence.status = proc_status
+    evidence.extracted_data_json = json.dumps(extracted_dict)
+    db.commit()
+    db.refresh(evidence)
+
+    return to_evidence_response(evidence)
 
 
 @router.delete("/{evidence_id}", status_code=status.HTTP_204_NO_CONTENT)

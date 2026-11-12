@@ -73,7 +73,7 @@ def create_paypal_order(amount_paise: int, settlement_id: int, return_url: str |
         "purchase_units": [
             {
                 "reference_id": f"settlement_{settlement_id}",
-                "description": f"SplitSmart AI Settlement #{settlement_id} (₹{amount_inr_str})",
+                "description": f"SplitSmart Settlement #{settlement_id} (₹{amount_inr_str})",
                 "amount": {
                     "currency_code": "USD",
                     "value": amount_usd_str,
@@ -81,7 +81,7 @@ def create_paypal_order(amount_paise: int, settlement_id: int, return_url: str |
             }
         ],
         "application_context": {
-            "brand_name": "SplitSmart AI 2.0",
+            "brand_name": "SplitSmart",
             "landing_page": "NO_PREFERENCE",
             "user_action": "PAY_NOW",
             "return_url": return_url or "https://example.com/return",

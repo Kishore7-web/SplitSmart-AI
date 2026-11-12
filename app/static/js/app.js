@@ -1,5 +1,5 @@
 /**
- * SplitSmart AI 2.0 - The Financial Memory of a Group
+ * SplitSmart - The Financial Memory of a Group
  * Core Frontend Client Architecture
  */
 
@@ -12,6 +12,8 @@ let currentGroupMembers = [];
 let currentGroupExpenses = [];
 let currentSplitType = "equal";
 let selectedUploadFile = null;
+let activeAIProposal = null;
+let cachedActivities = [];
 
 // --------------------------------------------------
 // 1. UTILITIES & API HELPERS
@@ -127,6 +129,7 @@ function showSection(sectionId) {
     const pageHeadings = {
         dashboard: "Dashboard",
         groups: "My Groups & Members",
+        customization: "Activities & Customization",
         timeline: "Activity Timeline",
         expenses: "Expense Management",
         evidence: "Upload & Evidence Centre",
@@ -147,6 +150,7 @@ function showSection(sectionId) {
     // Load section data
     if (currentGroupId) {
         if (sectionId === "timeline") loadTimeline();
+        else if (sectionId === "customization") loadCustomization();
         else if (sectionId === "expenses") loadExpenses();
         else if (sectionId === "evidence") loadEvidenceList();
         else if (sectionId === "analytics") loadAnalytics();
@@ -213,17 +217,23 @@ async function loadGroups() {
 function updateActiveGroupBadge(grp) {
     const badge = document.getElementById("activeGroupBadge");
     const heroLabel = document.getElementById("heroGroupLabel");
+    const archiveBtn = document.getElementById("archiveGroupBtn");
 
     if (!grp) {
         if (badge) badge.textContent = "No group selected";
         if (heroLabel) heroLabel.textContent = "Select a group";
+        if (archiveBtn) archiveBtn.textContent = "Archive Group";
         return;
     }
 
     const typeStr = (grp.activity_type || "general").toUpperCase();
     const budgetStr = grp.budget_paise > 0 ? ` · Budget: ${formatMoney(grp.budget_paise, grp.currency)}` : "";
-    if (badge) badge.textContent = `${typeStr}${budgetStr}`;
+    const archivedStr = grp.is_archived ? " · [ARCHIVED]" : "";
+    if (badge) badge.textContent = `${typeStr}${budgetStr}${archivedStr}`;
     if (heroLabel) heroLabel.textContent = grp.name;
+    if (archiveBtn) {
+        archiveBtn.textContent = grp.is_archived ? "Restore Group" : "Archive Group";
+    }
 }
 
 async function onGlobalGroupChange(newId) {
@@ -237,15 +247,26 @@ async function onGlobalGroupChange(newId) {
 async function onActiveGroupChanged() {
     if (!currentGroupId) return;
 
-    // Load group members & core data
+    // Load group members, activities & core data
     await Promise.all([
         loadGroupMembers(),
+        loadGroupActivities(),
         loadDashboard()
     ]);
 
     const activeHash = window.location.hash.replace("#", "") || "dashboard";
     if (activeHash !== "dashboard") {
         showSection(activeHash);
+    }
+}
+
+async function loadGroupActivities() {
+    if (!currentGroupId) return;
+    try {
+        cachedActivities = await apiRequest(`/api/groups/${currentGroupId}/activities`);
+        updateActivityDropdowns(cachedActivities);
+    } catch (err) {
+        console.error("Failed to load group activities:", err);
     }
 }
 
@@ -281,9 +302,27 @@ function renderMembersList() {
             <br><small style="color:var(--muted)">${m.email || 'No email'} · ${m.phone || 'No phone'}</small>
         `;
 
+        const right = document.createElement("div");
+        right.innerHTML = `
+            <button class="text-btn danger-btn small-btn" onclick="removeMember(${m.id}, '${m.name.replace(/'/g, "\\'")}')">Remove</button>
+        `;
+
         item.appendChild(left);
+        item.appendChild(right);
         container.appendChild(item);
     });
+}
+
+async function removeMember(memberId, name) {
+    if (!confirm(`Are you sure you want to remove member "${name}" from this group?`)) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/members/${memberId}`, { method: "DELETE" });
+        showToast(`Member "${name}" removed.`, "success");
+        await loadGroupMembers();
+        await loadDashboard();
+    } catch (err) {
+        showToast("Could not remove member: " + err.message, "error");
+    }
 }
 
 function populateMemberDropdowns() {
@@ -497,6 +536,568 @@ async function handleAddMember(e) {
 }
 
 // --------------------------------------------------
+// 5B. GROUP MANAGEMENT & AI ARCHITECT
+// --------------------------------------------------
+
+function openEditGroupModal() {
+    if (!currentGroupId) {
+        showToast("Select a group first.", "error");
+        return;
+    }
+    const grp = allGroups.find(g => g.id === currentGroupId);
+    if (!grp) return;
+
+    document.getElementById("editGroupName").value = grp.name || "";
+    document.getElementById("editGroupBudget").value = grp.budget_paise > 0 ? (grp.budget_paise / 100).toFixed(0) : "";
+    document.getElementById("editGroupActivity").value = grp.activity_type || "general";
+    document.getElementById("editGroupDesc").value = grp.description || "";
+    document.getElementById("editGroupModal").classList.remove("hidden");
+}
+
+function closeEditGroupModal() {
+    document.getElementById("editGroupModal").classList.add("hidden");
+}
+
+async function handleUpdateGroup(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const name = document.getElementById("editGroupName").value.trim();
+    const budgetRupees = document.getElementById("editGroupBudget").value;
+    const activity_type = document.getElementById("editGroupActivity").value.trim();
+    const description = document.getElementById("editGroupDesc").value.trim();
+
+    if (!name) return;
+
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+                name,
+                budget_paise: budgetRupees ? Math.round(Number(budgetRupees) * 100) : 0,
+                activity_type: activity_type || "general",
+                description: description || null
+            })
+        });
+
+        showToast("Group details updated successfully!", "success");
+        closeEditGroupModal();
+        await loadGroups();
+    } catch (err) {
+        showToast("Failed to update group: " + err.message, "error");
+    }
+}
+
+async function handleArchiveActiveGroup() {
+    if (!currentGroupId) return;
+    const grp = allGroups.find(g => g.id === currentGroupId);
+    if (!grp) return;
+
+    if (grp.is_archived) {
+        try {
+            await apiRequest(`/api/groups/${currentGroupId}/restore`, { method: "POST" });
+            showToast(`Group "${grp.name}" restored!`, "success");
+            await loadGroups();
+        } catch (err) {
+            showToast("Failed to restore group: " + err.message, "error");
+        }
+    } else {
+        if (!confirm(`Are you sure you want to archive group "${grp.name}"?`)) return;
+        try {
+            await apiRequest(`/api/groups/${currentGroupId}/archive`, { method: "POST" });
+            showToast(`Group "${grp.name}" archived.`, "success");
+            await loadGroups();
+        } catch (err) {
+            showToast("Failed to archive group: " + err.message, "error");
+        }
+    }
+}
+
+function openDeleteGroupModal() {
+    if (!currentGroupId) {
+        showToast("Select a group first.", "error");
+        return;
+    }
+    document.getElementById("deleteGroupModal").classList.remove("hidden");
+}
+
+function closeDeleteGroupModal() {
+    document.getElementById("deleteGroupModal").classList.add("hidden");
+}
+
+async function confirmDeleteGroup() {
+    if (!currentGroupId) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}`, { method: "DELETE" });
+        showToast("Group permanently deleted.", "success");
+        closeDeleteGroupModal();
+        currentGroupId = null;
+        await loadGroups();
+        showSection("groups");
+    } catch (err) {
+        showToast("Could not delete group: " + err.message, "error");
+    }
+}
+
+async function handleAIProposeGroup() {
+    const promptInput = document.getElementById("aiGroupPrompt");
+    const prompt = promptInput ? promptInput.value.trim() : "";
+    const btn = document.getElementById("aiProposeBtn");
+    const msg = document.getElementById("aiGroupMsg");
+
+    if (!prompt) {
+        showToast("Please describe your group event or activity first.", "error");
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "✨ Gemini is analyzing...";
+    }
+    showMessage(msg, "Gemini AI is structuring your group, activities, and budgets...", "normal");
+
+    try {
+        const proposal = await apiRequest("/api/ai/propose-group", {
+            method: "POST",
+            body: JSON.stringify({ prompt })
+        });
+
+        activeAIProposal = proposal;
+        renderAIProposal(activeAIProposal);
+
+        const previewCard = document.getElementById("aiProposalPreview");
+        if (previewCard) {
+            previewCard.classList.remove("hidden");
+            previewCard.scrollIntoView({ behavior: "smooth" });
+        }
+        showMessage(msg, "Structure proposed! Review or refine below.", "success");
+    } catch (err) {
+        showMessage(msg, err.message, "error");
+        showToast("AI proposal failed: " + err.message, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "✨ Propose Group Structure";
+        }
+    }
+}
+
+function renderAIProposal(proposal) {
+    if (!proposal) return;
+
+    const nameInput = document.getElementById("propGroupName");
+    const budgetInput = document.getElementById("propGroupBudget");
+    const list = document.getElementById("propActivitiesList");
+
+    if (nameInput) nameInput.value = proposal.group_name || "";
+    if (budgetInput) budgetInput.value = proposal.budget_paise > 0 ? (proposal.budget_paise / 100).toFixed(0) : "";
+
+    if (list) {
+        list.innerHTML = "";
+        const activities = proposal.activities || [];
+        if (activities.length === 0) {
+            list.innerHTML = '<span style="font-size:12px;color:var(--muted)">No sub-activities generated. Standard group structure.</span>';
+        } else {
+            activities.forEach(act => {
+                const chip = document.createElement("div");
+                chip.className = "activity-chip";
+                const bStr = act.budget_paise > 0 ? ` · ${formatMoney(act.budget_paise)}` : "";
+                chip.innerHTML = `<strong>${act.name}</strong>${bStr}<br><span style="font-size:11px;color:var(--muted)">${act.description || ''}</span>`;
+                list.appendChild(chip);
+            });
+        }
+    }
+}
+
+async function handleAIRefineGroup() {
+    const refineInput = document.getElementById("aiRefineInput");
+    const refinePrompt = refineInput ? refineInput.value.trim() : "";
+    if (!refinePrompt) {
+        showToast("Enter refinement instructions first.", "error");
+        return;
+    }
+    if (!activeAIProposal) {
+        showToast("No active proposal to refine.", "error");
+        return;
+    }
+
+    showToast("Refining structure with Gemini...", "normal");
+    try {
+        const refined = await apiRequest("/api/ai/refine-group-proposal", {
+            method: "POST",
+            body: JSON.stringify({
+                prompt: refinePrompt,
+                current_proposal: activeAIProposal
+            })
+        });
+
+        activeAIProposal = refined;
+        renderAIProposal(activeAIProposal);
+        if (refineInput) refineInput.value = "";
+        showToast("Group structure refined!", "success");
+    } catch (err) {
+        showToast("Refinement failed: " + err.message, "error");
+    }
+}
+
+async function handleAIConfirmGroup() {
+    if (!activeAIProposal) return;
+
+    const nameInput = document.getElementById("propGroupName");
+    const budgetInput = document.getElementById("propGroupBudget");
+
+    if (nameInput && nameInput.value.trim()) {
+        activeAIProposal.group_name = nameInput.value.trim();
+    }
+    if (budgetInput && budgetInput.value) {
+        activeAIProposal.budget_paise = Math.round(Number(budgetInput.value) * 100);
+    }
+
+    showToast("Creating group records in database...", "normal");
+    try {
+        const newGroup = await apiRequest("/api/ai/confirm-group-creation", {
+            method: "POST",
+            body: JSON.stringify({ proposal: activeAIProposal })
+        });
+
+        showToast(`Group "${newGroup.name}" created with custom activities!`, "success");
+        const preview = document.getElementById("aiProposalPreview");
+        if (preview) preview.classList.add("hidden");
+        const promptInput = document.getElementById("aiGroupPrompt");
+        if (promptInput) promptInput.value = "";
+
+        await loadGroups();
+        currentGroupId = newGroup.id;
+        const select = document.getElementById("globalGroupSelect");
+        if (select) select.value = currentGroupId;
+        await onActiveGroupChanged();
+        showSection("groups");
+    } catch (err) {
+        showToast("Creation failed: " + err.message, "error");
+    }
+}
+
+// --------------------------------------------------
+// 5C. ACTIVITIES & CUSTOMIZATION
+// --------------------------------------------------
+
+function showCustomTab(tabId, btn) {
+    document.querySelectorAll(".tab-nav .tab-btn").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    document.querySelectorAll(".custom-tab-content").forEach(c => c.classList.add("hidden"));
+    const target = document.getElementById(tabId);
+    if (target) target.classList.remove("hidden");
+}
+
+async function loadCustomization() {
+    if (!currentGroupId) return;
+
+    const actContainer = document.getElementById("customActivitiesList");
+    const catContainer = document.getElementById("customCategoriesList");
+    const roleContainer = document.getElementById("customRolesList");
+
+    try {
+        const [acts, cats, roles] = await Promise.all([
+            apiRequest(`/api/groups/${currentGroupId}/activities`),
+            apiRequest(`/api/groups/${currentGroupId}/customization/categories`),
+            apiRequest(`/api/groups/${currentGroupId}/customization/roles`)
+        ]);
+
+        cachedActivities = acts;
+
+        // 1. Activities & Budgets
+        if (actContainer) {
+            actContainer.innerHTML = "";
+            if (acts.length === 0) {
+                actContainer.innerHTML = '<div class="empty-state">No custom activities yet. Click "+ Add Activity" above to create one.</div>';
+            } else {
+                acts.forEach(a => {
+                    const item = document.createElement("div");
+                    item.className = "balance-item";
+                    item.style.marginTop = "8px";
+                    const bStr = a.budget_paise > 0 ? formatMoney(a.budget_paise) : "No budget";
+                    const spentStr = a.total_spent_paise ? ` · Spent: ${formatMoney(a.total_spent_paise)}` : "";
+                    item.innerHTML = `
+                        <div class="balance-details">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <strong>${a.name}</strong>
+                                <span class="status-pill status-${a.status === 'active' ? 'confirmed' : 'suggested'}">${a.status.toUpperCase()}</span>
+                            </div>
+                            <small>Budget: ${bStr}${spentStr}${a.description ? ` · ${a.description}` : ''}</small>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="secondary-button small-btn" onclick="openActivityModal(${a.id})">Edit</button>
+                            <button class="text-btn danger-btn small-btn" onclick="deleteActivity(${a.id})">Delete</button>
+                        </div>
+                    `;
+                    actContainer.appendChild(item);
+                });
+            }
+        }
+
+        // 2. Custom Categories
+        if (catContainer) {
+            catContainer.innerHTML = "";
+            if (cats.length === 0) {
+                catContainer.innerHTML = '<div class="empty-state">No custom categories defined. Default categories are active.</div>';
+            } else {
+                cats.forEach(c => {
+                    const item = document.createElement("div");
+                    item.className = "balance-item";
+                    item.style.marginTop = "8px";
+                    item.innerHTML = `
+                        <div class="balance-details">
+                            <strong>${c.icon ? c.icon + ' ' : ''}${c.name}</strong>
+                            <small>${c.is_default ? 'System Default' : 'Custom Category'}</small>
+                        </div>
+                        <div>
+                            ${!c.is_default ? `<button class="text-btn danger-btn small-btn" onclick="deleteCategory(${c.id})">Delete</button>` : '<span class="status-pill status-confirmed">Default</span>'}
+                        </div>
+                    `;
+                    catContainer.appendChild(item);
+                });
+            }
+        }
+
+        // 3. Custom Roles
+        if (roleContainer) {
+            roleContainer.innerHTML = "";
+            if (roles.length === 0) {
+                roleContainer.innerHTML = '<div class="empty-state">No custom roles defined. Standard roles (Owner, Admin, Member, Viewer) are active.</div>';
+            } else {
+                roles.forEach(r => {
+                    const item = document.createElement("div");
+                    item.className = "balance-item";
+                    item.style.marginTop = "8px";
+                    const perms = (r.permissions || []).map(p => `<span class="share-chip">${p.permission_key}</span>`).join(" ");
+                    item.innerHTML = `
+                        <div class="balance-details">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <strong>${r.name}</strong>
+                                <span class="status-pill status-suggested">ROLE</span>
+                            </div>
+                            <p style="font-size:12px;color:var(--muted);margin:4px 0">${r.description || 'No description'}</p>
+                            <div style="margin-top:4px">${perms || '<span style="font-size:11px;color:var(--muted)">No special permissions</span>'}</div>
+                        </div>
+                        <div>
+                            ${!r.is_system ? `<button class="text-btn danger-btn small-btn" onclick="deleteRole(${r.id})">Delete</button>` : '<span class="status-pill status-confirmed">System</span>'}
+                        </div>
+                    `;
+                    roleContainer.appendChild(item);
+                });
+            }
+        }
+
+        updateActivityDropdowns(acts);
+        updateCategoryDropdowns(cats);
+
+    } catch (err) {
+        console.error("Customization load error:", err);
+    }
+}
+
+function updateActivityDropdowns(acts) {
+    const expAct = document.getElementById("expActivity");
+    const editExpAct = document.getElementById("editExpActivity");
+
+    [expAct, editExpAct].forEach(sel => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">No specific activity (Group Level)</option>';
+        (acts || []).forEach(a => {
+            const opt = document.createElement("option");
+            opt.value = a.id;
+            opt.textContent = `${a.name}${a.budget_paise > 0 ? ' (' + formatMoney(a.budget_paise) + ')' : ''}`;
+            sel.appendChild(opt);
+        });
+        if (currentVal) sel.value = currentVal;
+    });
+}
+
+function updateCategoryDropdowns(cats) {
+    const dropdowns = ["expCategory", "editExpCategory", "draftCategory"];
+    dropdowns.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const currentVal = sel.value;
+        (cats || []).forEach(c => {
+            if (!Array.from(sel.options).some(o => o.value === c.name)) {
+                const opt = document.createElement("option");
+                opt.value = c.name;
+                opt.textContent = c.name;
+                sel.appendChild(opt);
+            }
+        });
+        if (currentVal) sel.value = currentVal;
+    });
+}
+
+function openActivityModal(actId) {
+    const modal = document.getElementById("activityModal");
+    const title = document.getElementById("activityModalTitle");
+
+    if (actId) {
+        const act = cachedActivities.find(a => a.id === actId);
+        if (act) {
+            document.getElementById("actEditId").value = act.id;
+            document.getElementById("actName").value = act.name;
+            document.getElementById("actBudget").value = act.budget_paise > 0 ? (act.budget_paise / 100).toFixed(0) : "";
+            document.getElementById("actDesc").value = act.description || "";
+            title.textContent = "Edit Custom Activity";
+        }
+    } else {
+        document.getElementById("actEditId").value = "";
+        document.getElementById("actName").value = "";
+        document.getElementById("actBudget").value = "";
+        document.getElementById("actDesc").value = "";
+        title.textContent = "Add Custom Activity";
+    }
+
+    modal.classList.remove("hidden");
+}
+
+function closeActivityModal() {
+    document.getElementById("activityModal").classList.add("hidden");
+}
+
+async function handleSaveActivity(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const actId = document.getElementById("actEditId").value;
+    const name = document.getElementById("actName").value.trim();
+    const budgetRupees = document.getElementById("actBudget").value;
+    const description = document.getElementById("actDesc").value.trim() || null;
+
+    if (!name) return;
+
+    const payload = {
+        name,
+        budget_paise: budgetRupees ? Math.round(Number(budgetRupees) * 100) : 0,
+        description
+    };
+
+    try {
+        if (actId) {
+            await apiRequest(`/api/groups/${currentGroupId}/activities/${actId}`, {
+                method: "PATCH",
+                body: JSON.stringify(payload)
+            });
+            showToast("Activity updated!", "success");
+        } else {
+            await apiRequest(`/api/groups/${currentGroupId}/activities/`, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            showToast("Activity created!", "success");
+        }
+
+        closeActivityModal();
+        await loadCustomization();
+    } catch (err) {
+        showToast("Error saving activity: " + err.message, "error");
+    }
+}
+
+async function deleteActivity(actId) {
+    if (!confirm("Are you sure you want to delete this activity?")) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/activities/${actId}`, { method: "DELETE" });
+        showToast("Activity deleted.", "success");
+        await loadCustomization();
+    } catch (err) {
+        showToast("Could not delete activity: " + err.message, "error");
+    }
+}
+
+function openCategoryModal() {
+    document.getElementById("catName").value = "";
+    document.getElementById("categoryModal").classList.remove("hidden");
+}
+
+function closeCategoryModal() {
+    document.getElementById("categoryModal").classList.add("hidden");
+}
+
+async function handleSaveCategory(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const name = document.getElementById("catName").value.trim();
+    if (!name) return;
+
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/customization/categories`, {
+            method: "POST",
+            body: JSON.stringify({ name })
+        });
+        showToast(`Custom category "${name}" added!`, "success");
+        closeCategoryModal();
+        await loadCustomization();
+    } catch (err) {
+        showToast("Error adding category: " + err.message, "error");
+    }
+}
+
+async function deleteCategory(catId) {
+    if (!confirm("Delete this custom category?")) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/customization/categories/${catId}`, { method: "DELETE" });
+        showToast("Category deleted.", "success");
+        await loadCustomization();
+    } catch (err) {
+        showToast("Error deleting category: " + err.message, "error");
+    }
+}
+
+function openRoleModal() {
+    document.getElementById("roleName").value = "";
+    document.getElementById("roleDesc").value = "";
+    document.querySelectorAll('input[name="rolePerm"]').forEach(cb => {
+        cb.checked = ["create_expenses", "manage_evidence", "manage_settlements"].includes(cb.value);
+    });
+    document.getElementById("roleModal").classList.remove("hidden");
+}
+
+function closeRoleModal() {
+    document.getElementById("roleModal").classList.add("hidden");
+}
+
+async function handleSaveRole(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const name = document.getElementById("roleName").value.trim();
+    const description = document.getElementById("roleDesc").value.trim() || null;
+    const permissions = Array.from(document.querySelectorAll('input[name="rolePerm"]:checked')).map(cb => ({ permission_key: cb.value }));
+
+    if (!name) return;
+
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/customization/roles`, {
+            method: "POST",
+            body: JSON.stringify({ name, description, permissions })
+        });
+        showToast(`Custom role "${name}" created!`, "success");
+        closeRoleModal();
+        await loadCustomization();
+    } catch (err) {
+        showToast("Error creating role: " + err.message, "error");
+    }
+}
+
+async function deleteRole(roleId) {
+    if (!confirm("Delete this custom role?")) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/customization/roles/${roleId}`, { method: "DELETE" });
+        showToast("Role deleted.", "success");
+        await loadCustomization();
+    } catch (err) {
+        showToast("Error deleting role: " + err.message, "error");
+    }
+}
+
+// --------------------------------------------------
 // 6. ACTIVITY TIMELINE
 // --------------------------------------------------
 
@@ -696,6 +1297,8 @@ async function handleSaveExpense(e) {
     const paidByMemberId = Number(document.getElementById("expPayer").value);
     const merchant = document.getElementById("expMerchant").value.trim() || null;
     const evidenceId = document.getElementById("expEvidenceSelect").value || null;
+    const activityId = document.getElementById("expActivity")?.value || null;
+    const notes = document.getElementById("expNotes")?.value.trim() || null;
 
     const selectedBoxes = Array.from(document.querySelectorAll('#participantsList input[type="checkbox"]:checked'));
     const participantIds = selectedBoxes.map(cb => Number(cb.dataset.memberId));
@@ -713,7 +1316,9 @@ async function handleSaveExpense(e) {
         split_type: currentSplitType,
         participant_ids: participantIds,
         category,
+        activity_id: activityId ? Number(activityId) : null,
         merchant,
+        notes,
         evidence_id: evidenceId ? Number(evidenceId) : null
     };
 
@@ -787,6 +1392,8 @@ async function loadExpenses() {
         currentGroupExpenses.forEach(exp => {
             const payer = currentGroupMembers.find(m => m.id === exp.paid_by_member_id);
             const payerName = payer ? payer.name : `Member #${exp.paid_by_member_id}`;
+            const act = cachedActivities.find(a => a.id === exp.activity_id);
+            const actChip = act ? `<span class="status-pill status-suggested">🏷 ${act.name}</span>` : '';
 
             const card = document.createElement("article");
             card.className = "expense-item";
@@ -796,10 +1403,12 @@ async function loadExpenses() {
                     <div style="display:flex;align-items:center;gap:8px">
                         <strong>${exp.description}</strong>
                         <span class="status-pill status-suggested">${exp.category}</span>
+                        ${actChip}
                         ${exp.evidence_count > 0 ? '<span class="status-pill status-confirmed">📎 Receipt Linked</span>' : ''}
                     </div>
                     <small>Paid by ${payerName} · Split: ${exp.split_type.toUpperCase()} · ${formatDateTime(exp.created_at)}</small>
                     ${exp.merchant ? `<small style="display:block;color:var(--muted)">Merchant: ${exp.merchant}</small>` : ''}
+                    ${exp.notes ? `<small style="display:block;color:var(--muted)">Notes: ${exp.notes}</small>` : ''}
                     <div class="expense-shares" style="margin-top:6px">
                         ${exp.shares.map(s => {
                             const sm = currentGroupMembers.find(m => m.id === s.member_id);
@@ -809,7 +1418,10 @@ async function loadExpenses() {
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
                     <div class="expense-item-amount">${formatMoney(exp.total_amount_paise)}</div>
-                    <button class="text-btn danger-btn" onclick="deleteExpense(${exp.id})">Delete</button>
+                    <div style="display:flex;gap:6px">
+                        <button class="text-btn small-btn" onclick="openEditExpenseModal(${exp.id})">Edit</button>
+                        <button class="text-btn danger-btn small-btn" onclick="deleteExpense(${exp.id})">Delete</button>
+                    </div>
                 </div>
             `;
             container.appendChild(card);
@@ -817,6 +1429,89 @@ async function loadExpenses() {
 
     } catch (err) {
         container.innerHTML = `<div class="empty-state">Failed to load expenses: ${err.message}</div>`;
+    }
+}
+
+function openEditExpenseModal(expId) {
+    const exp = currentGroupExpenses.find(e => e.id === expId);
+    if (!exp) return;
+
+    document.getElementById("editExpId").value = exp.id;
+    document.getElementById("editExpDesc").value = exp.description;
+    document.getElementById("editExpAmount").value = (exp.total_amount_paise / 100).toFixed(2);
+    document.getElementById("editExpCategory").value = exp.category || "General";
+    document.getElementById("editExpMerchant").value = exp.merchant || "";
+    document.getElementById("editExpNotes").value = exp.notes || "";
+
+    const payerSelect = document.getElementById("editExpPayer");
+    payerSelect.innerHTML = "";
+    currentGroupMembers.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = `${m.name} (${m.role})`;
+        if (m.id === exp.paid_by_member_id) opt.selected = true;
+        payerSelect.appendChild(opt);
+    });
+
+    const actSelect = document.getElementById("editExpActivity");
+    if (actSelect) {
+        actSelect.innerHTML = '<option value="">No specific activity</option>';
+        cachedActivities.forEach(a => {
+            const opt = document.createElement("option");
+            opt.value = a.id;
+            opt.textContent = a.name;
+            if (a.id === exp.activity_id) opt.selected = true;
+            actSelect.appendChild(opt);
+        });
+    }
+
+    document.getElementById("editExpenseModal").classList.remove("hidden");
+}
+
+function closeEditExpenseModal() {
+    document.getElementById("editExpenseModal").classList.add("hidden");
+}
+
+async function handleUpdateExpense(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const expId = document.getElementById("editExpId").value;
+    const description = document.getElementById("editExpDesc").value.trim();
+    const amountRupees = parseFloat(document.getElementById("editExpAmount").value);
+    const category = document.getElementById("editExpCategory").value;
+    const paidByMemberId = Number(document.getElementById("editExpPayer").value);
+    const activityId = document.getElementById("editExpActivity").value;
+    const merchant = document.getElementById("editExpMerchant").value.trim() || null;
+    const notes = document.getElementById("editExpNotes").value.trim() || null;
+
+    if (!description || !amountRupees || !paidByMemberId) {
+        showToast("Fill in all required fields.", "error");
+        return;
+    }
+
+    const payload = {
+        description,
+        total_amount_paise: Math.round(amountRupees * 100),
+        paid_by_member_id: paidByMemberId,
+        category,
+        activity_id: activityId ? Number(activityId) : null,
+        merchant,
+        notes
+    };
+
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/expenses/${expId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload)
+        });
+
+        showToast("Expense updated and shares recalculated!", "success");
+        closeEditExpenseModal();
+        await loadExpenses();
+        await loadDashboard();
+    } catch (err) {
+        showToast("Failed to update expense: " + err.message, "error");
     }
 }
 
@@ -1285,9 +1980,10 @@ async function loadSettlements() {
                             <strong>${fromName} → ${toName}</strong>
                             <small>${fromName} pays ${toName}</small>
                         </div>
-                        <div style="display:flex;align-items:center;gap:8px">
+                        <div style="display:flex;align-items:center;gap:6px">
                             <strong>${formatMoney(s.amount_paise)}</strong>
-                            <button class="primary-button small-btn" onclick="recordSuggestedSettlement(${s.from_member_id}, ${s.to_member_id}, ${s.amount_paise})">Record Payment</button>
+                            <button class="primary-button small-btn" onclick="recordSuggestedSettlement(${s.from_member_id}, ${s.to_member_id}, ${s.amount_paise})">Record Full</button>
+                            <button class="secondary-button small-btn" onclick="openPartialSettlementModal(${s.from_member_id}, ${s.to_member_id}, ${s.amount_paise}, '${fromName.replace(/'/g, "\\'")}', '${toName.replace(/'/g, "\\'")}')">Custom / Partial</button>
                         </div>
                     `;
                     suggestionsContainer.appendChild(row);
@@ -1312,15 +2008,22 @@ async function loadSettlements() {
                     row.style.marginTop = "8px";
 
                     const isCompleted = st.status === "completed";
+                    const isCancelled = st.status === "cancelled";
+                    const badgeClass = isCompleted ? "status-confirmed" : (isCancelled ? "status-unmatched" : "status-suggested");
+
                     row.innerHTML = `
                         <div class="balance-details">
                             <strong>${fromName} → ${toName}</strong>
-                            <small>${formatDateTime(st.created_at)} · Provider: ${st.payment_provider || 'Manual'}</small>
+                            <small>${formatDateTime(st.created_at)} · Provider: ${st.payment_provider || 'Manual'}${st.notes ? ' · Note: ' + st.notes : ''}</small>
                         </div>
-                        <div style="display:flex;align-items:center;gap:8px">
+                        <div style="display:flex;align-items:center;gap:6px">
                             <strong>${formatMoney(st.amount_paise)}</strong>
-                            <span class="status-pill status-${isCompleted ? 'confirmed' : 'suggested'}">${st.status.toUpperCase()}</span>
-                            ${!isCompleted ? `<button class="secondary-button small-btn" onclick="completeSettlement(${st.id})">Mark Completed</button>` : ''}
+                            <span class="status-pill ${badgeClass}">${st.status.toUpperCase()}</span>
+                            ${!isCompleted && !isCancelled ? `
+                                <button class="secondary-button small-btn" onclick="completeSettlement(${st.id})">Mark Completed</button>
+                                <button class="secondary-button small-btn" onclick="selectPayPalSettlement(${st.id})">Pay via PayPal</button>
+                                <button class="text-btn danger-btn small-btn" onclick="cancelSettlement(${st.id})">Cancel</button>
+                            ` : ''}
                         </div>
                     `;
                     historyContainer.appendChild(row);
@@ -1350,6 +2053,76 @@ async function recordSuggestedSettlement(fromId, toId, amountPaise) {
         await loadDashboard();
     } catch (err) {
         showToast("Could not record settlement: " + err.message, "error");
+    }
+}
+
+function openPartialSettlementModal(fromId, toId, maxPaise, fromName, toName) {
+    document.getElementById("settleFromId").value = fromId;
+    document.getElementById("settleToId").value = toId;
+    document.getElementById("settleParticipantsInfo").textContent = `${fromName} owes ${toName} (Suggested: ${formatMoney(maxPaise)})`;
+    document.getElementById("settleAmount").value = (maxPaise / 100).toFixed(2);
+    document.getElementById("settleNotes").value = "";
+    document.getElementById("partialSettlementModal").classList.remove("hidden");
+}
+
+function closePartialSettlementModal() {
+    document.getElementById("partialSettlementModal").classList.add("hidden");
+}
+
+async function handleRecordCustomSettlement(e) {
+    e.preventDefault();
+    if (!currentGroupId) return;
+
+    const fromId = Number(document.getElementById("settleFromId").value);
+    const toId = Number(document.getElementById("settleToId").value);
+    const amountVal = parseFloat(document.getElementById("settleAmount").value);
+    const provider = document.getElementById("settleProvider").value;
+    const notes = document.getElementById("settleNotes").value.trim() || null;
+
+    if (!fromId || !toId || !amountVal) {
+        showToast("Please provide valid payment amount.", "error");
+        return;
+    }
+
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/settlements/`, {
+            method: "POST",
+            body: JSON.stringify({
+                from_member_id: fromId,
+                to_member_id: toId,
+                amount_paise: Math.round(amountVal * 100),
+                payment_provider: provider,
+                notes
+            })
+        });
+
+        showToast("Settlement payment recorded!", "success");
+        closePartialSettlementModal();
+        await loadSettlements();
+        await loadDashboard();
+    } catch (err) {
+        showToast("Could not record settlement: " + err.message, "error");
+    }
+}
+
+async function cancelSettlement(settlementId) {
+    if (!confirm("Are you sure you want to cancel this settlement?")) return;
+    try {
+        await apiRequest(`/api/groups/${currentGroupId}/settlements/${settlementId}/cancel`, { method: "PATCH" });
+        showToast("Settlement cancelled.", "success");
+        await loadSettlements();
+        await loadDashboard();
+    } catch (err) {
+        showToast("Error cancelling settlement: " + err.message, "error");
+    }
+}
+
+function selectPayPalSettlement(settlementId) {
+    showSection("paypal");
+    const select = document.getElementById("paypalSettlementSelect");
+    if (select) {
+        select.value = settlementId;
+        onPayPalSettlementSelected(settlementId);
     }
 }
 
@@ -1663,7 +2436,7 @@ async function loadDiagnostics() {
                 paypalBadge.textContent = "CONNECTED (PayPal Sandbox Active)";
             } else {
                 paypalBadge.className = "status-pill status-suggested";
-                paypalBadge.textContent = "DEMO SIMULATION MODE (Configure .env for Live Sandbox)";
+                paypalBadge.textContent = "STANDBY MODE (Configure PAYPAL_CLIENT_ID in .env for Live Sandbox)";
             }
         }
 
@@ -1673,9 +2446,25 @@ async function loadDiagnostics() {
 }
 
 // --------------------------------------------------
-// 14. BOOTSTRAP INITIALIZATION
+// 14. BOOTSTRAP INITIALIZATION & MODAL HANDLERS
 // --------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
+
+    // Close any active modal when clicking outside modal card
+    document.querySelectorAll(".modal-overlay").forEach(overlay => {
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+                overlay.classList.add("hidden");
+            }
+        });
+    });
+
+    // Close on Escape key
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            document.querySelectorAll(".modal-overlay:not(.hidden)").forEach(m => m.classList.add("hidden"));
+        }
+    });
 });

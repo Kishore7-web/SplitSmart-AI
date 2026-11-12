@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0f172a">
-    <title>SplitSmart AI 2.0 | The Financial Memory of a Group</title>
+    <title>SplitSmart | The Financial Memory of a Group</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/app.js" defer></script>
 </head>
@@ -17,7 +17,7 @@
         <a class="brand" href="#dashboard">
             <span class="brand-icon">S</span>
             <div class="brand-text">
-                <span class="brand-title">SplitSmart AI <span class="version-badge">2.0</span></span>
+                <span class="brand-title">SplitSmart</span>
                 <span class="brand-subtitle">The Financial Memory of a Group</span>
             </div>
         </a>
@@ -39,6 +39,9 @@
             </a>
             <a class="nav-link" href="#groups" data-section="groups">
                 <span class="nav-icon">◫</span> My Groups & Members
+            </a>
+            <a class="nav-link" href="#customization" data-section="customization">
+                <span class="nav-icon">✦</span> Activities & Customization
             </a>
             <a class="nav-link" href="#timeline" data-section="timeline">
                 <span class="nav-icon">◷</span> Activity Timeline
@@ -72,7 +75,7 @@
                 <strong>The Financial Memory</strong>
                 <p>One Group. Any Activity. Every Expense Understood. Every Payment Accounted For.</p>
             </div>
-            <div class="sidebar-footer">SplitSmart AI · Version 2.0.0</div>
+            <div class="sidebar-footer">SplitSmart · Financial Intelligence</div>
         </div>
     </aside>
 
@@ -83,7 +86,7 @@
         <!-- TOPBAR -->
         <header class="topbar">
             <div>
-                <span class="eyebrow" id="topbarEyebrow">SPLITSMART AI 2.0 · FINANCIAL INTELLIGENCE</span>
+                <span class="eyebrow" id="topbarEyebrow">SPLITSMART · FINANCIAL INTELLIGENCE</span>
                 <h1 id="pageHeading">Dashboard</h1>
             </div>
             <div class="topbar-actions">
@@ -104,7 +107,7 @@
 
             <div class="welcome-card">
                 <div class="welcome-content">
-                    <span class="welcome-tag">SPLITSMART AI 2.0</span>
+                    <span class="welcome-tag">SPLITSMART</span>
                     <h2>The Financial Memory<br>of Your Group.</h2>
                     <p>
                         From trips and shared apartments to weddings and campus events—upload receipts,
@@ -208,6 +211,61 @@
                     <span class="eyebrow">GROUP INTELLIGENCE</span>
                     <h2>Group & Member Management</h2>
                     <p>Configure any group activity—from roommates and trips to weddings and projects.</p>
+                </div>
+                <div style="display:flex;gap:10px">
+                    <button class="secondary-button" type="button" onclick="openEditGroupModal()">⚙ Edit Active Group</button>
+                    <button class="secondary-button" type="button" id="archiveGroupBtn" onclick="handleArchiveActiveGroup()">Archive Group</button>
+                    <button class="danger-button" type="button" onclick="openDeleteGroupModal()">Delete Group</button>
+                </div>
+            </div>
+
+            <!-- AI-POWERED CONVERSATIONAL GROUP ARCHITECT -->
+            <div class="ai-group-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <div>
+                        <h3 style="color:#6b21a8;margin:0;display:flex;align-items:center;gap:8px">
+                            <span>✨</span> AI Group Architect (Conversational Group Creation)
+                        </h3>
+                        <p style="margin:4px 0;font-size:13px;color:#581c87">Describe any event, symposium, trip or shared activity in natural language. Gemini will generate custom activities, budgets, categories, and structure.</p>
+                    </div>
+                </div>
+                <div class="form-field" style="margin-bottom:12px">
+                    <textarea id="aiGroupPrompt" rows="3" placeholder="e.g. I am organizing a three-day college symposium with 8 participants and budget of ₹30,000. I want separate activities for food, decoration, transportation, accommodation, photography and stage arrangements."></textarea>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <button class="primary-button" type="button" id="aiProposeBtn" onclick="handleAIProposeGroup()">✨ Propose Group Structure</button>
+                    <span id="aiGroupMsg" class="form-message"></span>
+                </div>
+
+                <!-- EDITABLE PROPOSAL PREVIEW CARD -->
+                <div id="aiProposalPreview" class="hidden" style="margin-top:20px;padding:16px;background:white;border-radius:12px;border:1px solid #d8b4fe">
+                    <h4 style="margin:0 0 10px 0;color:#6b21a8">Proposed Group Structure (Editable Preview)</h4>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Group Name</label>
+                            <input id="propGroupName" type="text">
+                        </div>
+                        <div class="form-field">
+                            <label>Total Budget (₹)</label>
+                            <input id="propGroupBudget" type="number" step="100">
+                        </div>
+                    </div>
+                    <div style="margin:12px 0">
+                        <label style="font-weight:600;font-size:12px">Activities & Budgets:</label>
+                        <div id="propActivitiesList" class="activity-chip-list"></div>
+                    </div>
+                    <div class="form-row" style="margin-top:12px">
+                        <div class="form-field" style="flex:2">
+                            <input id="aiRefineInput" type="text" placeholder="Conversational follow-up: e.g. 'Allocate ₹4,000 to photography', 'Remove accommodation'">
+                        </div>
+                        <div class="form-field" style="flex:1">
+                            <button class="secondary-button" type="button" onclick="handleAIRefineGroup()">Refine with AI</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;display:flex;gap:12px">
+                        <button class="primary-button" type="button" onclick="handleAIConfirmGroup()">✓ Confirm & Create Group in Database</button>
+                        <button class="secondary-button" type="button" onclick="document.getElementById('aiProposalPreview').classList.add('hidden')">Dismiss</button>
+                    </div>
                 </div>
             </div>
 
@@ -327,6 +385,74 @@
 
 
         <!-- ============================================================== -->
+        <!-- 2B. ACTIVITIES & CUSTOMIZATION -->
+        <!-- ============================================================== -->
+        <section class="page-section" id="customization">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">CUSTOM ACTIVITIES & ROLES</span>
+                    <h2>Activities & Customization</h2>
+                    <p>Manage custom activities with dedicated budgets, custom categories, and role permissions.</p>
+                </div>
+                <div style="display:flex;gap:10px">
+                    <button class="primary-button" type="button" onclick="openActivityModal()">+ Add Activity</button>
+                    <button class="secondary-button" type="button" onclick="openCategoryModal()">+ Add Category</button>
+                    <button class="secondary-button" type="button" onclick="openRoleModal()">+ Add Custom Role</button>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="showCustomTab('tabActivities', this)">Activities & Budgets</button>
+                <button class="tab-btn" onclick="showCustomTab('tabCategories', this)">Custom Categories</button>
+                <button class="tab-btn" onclick="showCustomTab('tabRoles', this)">Custom Roles & Permissions</button>
+            </div>
+
+            <div id="tabActivities" class="custom-tab-content">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Activities & Sub-events</h3>
+                            <p>Track spending against activity-specific budgets (e.g. Photography, Catering, Stage Lighting).</p>
+                        </div>
+                    </div>
+                    <div id="customActivitiesList">
+                        <div class="empty-state">Select a group to view activities.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabCategories" class="custom-tab-content hidden">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Custom Categories</h3>
+                            <p>Create, rename, and manage custom expense categories for this group.</p>
+                        </div>
+                    </div>
+                    <div id="customCategoriesList">
+                        <div class="empty-state">Select a group to view categories.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabRoles" class="custom-tab-content hidden">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Custom Roles & Permissions</h3>
+                            <p>Configure granular roles and permissions across groups, activities, expenses, evidence, and settlements.</p>
+                        </div>
+                    </div>
+                    <div id="customRolesList">
+                        <div class="empty-state">Select a group to view roles.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================== -->
         <!-- 3. ACTIVITY TIMELINE -->
         <!-- ============================================================== -->
         <section class="page-section" id="timeline">
@@ -415,6 +541,19 @@
                             <div class="form-field">
                                 <label for="expMerchant">Merchant / Place <span class="optional">(optional)</span></label>
                                 <input id="expMerchant" type="text" placeholder="e.g. Taj Hotel, Indian Oil">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="expActivity">Associated Activity <span class="optional">(optional)</span></label>
+                                <select id="expActivity">
+                                    <option value="">No specific activity (Group Level)</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="expNotes">Notes <span class="optional">(optional)</span></label>
+                                <input id="expNotes" type="text" placeholder="e.g. Paid in cash, bill attached">
                             </div>
                         </div>
 
@@ -1006,12 +1145,251 @@
 
         <!-- FOOTER -->
         <footer class="page-footer">
-            <strong>SplitSmart AI 2.0</strong>
+            <strong>SplitSmart</strong>
             <span>"One Group. Any Activity. Every Expense Understood. Every Payment Accounted For."</span>
             <span>FastAPI · SQLAlchemy · Google Gemini AI · PayPal Orders v2 · SQLite</span>
         </footer>
 
     </main>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODALS -->
+<!-- ============================================================== -->
+
+<!-- 1. EDIT EXPENSE MODAL -->
+<div id="editExpenseModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit Expense</h3>
+            <button class="close-card-btn" type="button" onclick="closeEditExpenseModal()">✕</button>
+        </div>
+        <form id="editExpenseForm" class="form-stack" onsubmit="handleUpdateExpense(event)">
+            <input type="hidden" id="editExpId">
+            <div class="form-field">
+                <label for="editExpDesc">Description *</label>
+                <input id="editExpDesc" type="text" required>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="editExpAmount">Total Amount (₹) *</label>
+                    <input id="editExpAmount" type="number" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-field">
+                    <label for="editExpCategory">Category</label>
+                    <select id="editExpCategory">
+                        <option value="Food & Dining">Food & Dining</option>
+                        <option value="Transportation">Transportation</option>
+                        <option value="Fuel">Fuel</option>
+                        <option value="Accommodation">Accommodation</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Tickets & Events">Tickets & Events</option>
+                        <option value="Bills & Utilities">Bills & Utilities</option>
+                        <option value="General">General</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="editExpPayer">Paid By</label>
+                    <select id="editExpPayer" required></select>
+                </div>
+                <div class="form-field">
+                    <label for="editExpActivity">Activity</label>
+                    <select id="editExpActivity">
+                        <option value="">No specific activity</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="editExpMerchant">Merchant</label>
+                <input id="editExpMerchant" type="text">
+            </div>
+            <div class="form-field">
+                <label for="editExpNotes">Notes</label>
+                <input id="editExpNotes" type="text">
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Save Changes</button>
+                <button class="secondary-button" type="button" onclick="closeEditExpenseModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. EDIT GROUP MODAL -->
+<div id="editGroupModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Edit Group Settings</h3>
+            <button class="close-card-btn" type="button" onclick="closeEditGroupModal()">✕</button>
+        </div>
+        <form id="editGroupForm" class="form-stack" onsubmit="handleUpdateGroup(event)">
+            <div class="form-field">
+                <label for="editGroupName">Group Name *</label>
+                <input id="editGroupName" type="text" required>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="editGroupBudget">Total Budget (₹)</label>
+                    <input id="editGroupBudget" type="number" step="100">
+                </div>
+                <div class="form-field">
+                    <label for="editGroupActivity">Activity Type</label>
+                    <input id="editGroupActivity" type="text">
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="editGroupDesc">Description</label>
+                <textarea id="editGroupDesc" rows="2"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Save Group</button>
+                <button class="secondary-button" type="button" onclick="closeEditGroupModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. DELETE GROUP MODAL -->
+<div id="deleteGroupModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 style="color:#ef4444">⚠️ Confirm Group Deletion</h3>
+            <button class="close-card-btn" type="button" onclick="closeDeleteGroupModal()">✕</button>
+        </div>
+        <p style="font-size:14px;color:var(--text);line-height:1.5">
+            Are you sure you want to delete this group? All associated activities, expense records, evidence links, and settlement history will be permanently deleted.
+        </p>
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
+            <button class="secondary-button" type="button" onclick="closeDeleteGroupModal()">Cancel</button>
+            <button class="danger-button" type="button" onclick="confirmDeleteGroup()">Delete Group Permanently</button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. PARTIAL / CUSTOM SETTLEMENT MODAL -->
+<div id="partialSettlementModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Record Settlement Payment</h3>
+            <button class="close-card-btn" type="button" onclick="closePartialSettlementModal()">✕</button>
+        </div>
+        <form id="partialSettlementForm" class="form-stack" onsubmit="handleRecordCustomSettlement(event)">
+            <input type="hidden" id="settleFromId">
+            <input type="hidden" id="settleToId">
+            <div id="settleParticipantsInfo" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:12px"></div>
+            <div class="form-field">
+                <label for="settleAmount">Payment Amount (₹) *</label>
+                <input id="settleAmount" type="number" step="0.01" min="0.01" required>
+            </div>
+            <div class="form-field">
+                <label for="settleProvider">Payment Method</label>
+                <select id="settleProvider">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI / Bank Transfer">UPI / Bank Transfer</option>
+                    <option value="PayPal Sandbox">PayPal Sandbox</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="settleNotes">Reference / Note <span class="optional">(optional)</span></label>
+                <input id="settleNotes" type="text" placeholder="e.g. Google Pay transaction ID, Cash given at cafe">
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Record Payment</button>
+                <button class="secondary-button" type="button" onclick="closePartialSettlementModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 5. ACTIVITY MODAL -->
+<div id="activityModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="activityModalTitle">Add Custom Activity</h3>
+            <button class="close-card-btn" type="button" onclick="closeActivityModal()">✕</button>
+        </div>
+        <form id="activityForm" class="form-stack" onsubmit="handleSaveActivity(event)">
+            <input type="hidden" id="actEditId">
+            <div class="form-field">
+                <label for="actName">Activity Name *</label>
+                <input id="actName" type="text" placeholder="e.g. Photography, Stage Lighting, Dinner Cruise" required>
+            </div>
+            <div class="form-field">
+                <label for="actBudget">Allocated Budget (₹)</label>
+                <input id="actBudget" type="number" step="100" placeholder="e.g. 4000">
+            </div>
+            <div class="form-field">
+                <label for="actDesc">Description</label>
+                <textarea id="actDesc" rows="2" placeholder="e.g. Equipment rental and photographer fee"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Save Activity</button>
+                <button class="secondary-button" type="button" onclick="closeActivityModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 6. CATEGORY MODAL -->
+<div id="categoryModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Add Custom Category</h3>
+            <button class="close-card-btn" type="button" onclick="closeCategoryModal()">✕</button>
+        </div>
+        <form id="categoryForm" class="form-stack" onsubmit="handleSaveCategory(event)">
+            <div class="form-field">
+                <label for="catName">Category Name *</label>
+                <input id="catName" type="text" placeholder="e.g. Equipment, Printing, Emergency" required>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Add Category</button>
+                <button class="secondary-button" type="button" onclick="closeCategoryModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 7. ROLE MODAL -->
+<div id="roleModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Create Custom Role</h3>
+            <button class="close-card-btn" type="button" onclick="closeRoleModal()">✕</button>
+        </div>
+        <form id="roleForm" class="form-stack" onsubmit="handleSaveRole(event)">
+            <div class="form-field">
+                <label for="roleName">Role Name *</label>
+                <input id="roleName" type="text" placeholder="e.g. Treasurer, Event Lead, Auditor" required>
+            </div>
+            <div class="form-field">
+                <label for="roleDesc">Description</label>
+                <input id="roleDesc" type="text" placeholder="Role responsibilities">
+            </div>
+            <div style="margin:12px 0">
+                <label style="font-weight:600;font-size:12px">Permissions:</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;font-size:12px">
+                    <label><input type="checkbox" name="rolePerm" value="manage_group"> Manage Group</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_activities"> Manage Activities</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_members"> Manage Members</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_roles"> Manage Roles</label>
+                    <label><input type="checkbox" name="rolePerm" value="create_expenses" checked> Create Expenses</label>
+                    <label><input type="checkbox" name="rolePerm" value="edit_expenses"> Edit Expenses</label>
+                    <label><input type="checkbox" name="rolePerm" value="delete_expenses"> Delete Expenses</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_evidence" checked> Upload Evidence</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_budgets"> Manage Budgets</label>
+                    <label><input type="checkbox" name="rolePerm" value="manage_settlements" checked> Settle Debts</label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">Create Role</button>
+                <button class="secondary-button" type="button" onclick="closeRoleModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 </body>

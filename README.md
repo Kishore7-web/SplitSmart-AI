@@ -1,26 +1,30 @@
-# SplitSmart AI 2.0 — The Financial Memory of a Group
+# SplitSmart — The Financial Memory of a Group
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Gemini](https://img.shields.io/badge/Google%20Gemini-Multimodal%202.5-4285F4.svg)](https://ai.google.dev/)
 [![PayPal Sandbox](https://img.shields.io/badge/PayPal-Orders%20v2%20REST-003087.svg)](https://developer.paypal.com/)
-[![Tests Passing](https://img.shields.io/badge/tests-15%2F15%20passing-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-27%2F27%20passing-brightgreen.svg)]()
 
 > **"The Financial Memory of a Group"**
-> SplitSmart AI 2.0 is an intelligent group activity management and financial intelligence platform. It tracks, organizes, analyzes, and manages group financial activities from kickoff to final settlement—connecting people, activities, expenses, receipts, payment proofs, budgets, and digital settlements into an audit-ready financial history.
+> SplitSmart is an intelligent group activity management and financial intelligence platform. It tracks, organizes, analyzes, and manages group financial activities from kickoff to final settlement—connecting people, activities, expenses, receipts, payment proofs, budgets, and digital settlements into an audit-ready financial history.
 
 ---
 
-## 🌟 Why SplitSmart AI 2.0?
+## 🌟 Why SplitSmart?
 
 Traditional expense splitters force members to manually enter repetitive expense forms, guess who owes what, and struggle with forgotten receipts after a trip or event.
 
-SplitSmart AI 2.0 solves this with an **Information & Evidence Collection Centre**:
-- **Not just trips**: Built for **roommates**, **family budgets**, **weddings & receptions**, **college events & student projects**, **clubs & NGOs**, **group bulk purchases**, and **vacations**.
+SplitSmart solves this with an **Information & Evidence Collection Centre**:
+- **Not just trips**: Built for **college events & symposiums**, **roommates & flatshares**, **family budgets**, **weddings & celebrations**, **clubs & NGOs**, **group bulk purchases**, and **vacations**.
+- **AI Group Architect**: Describe any event in plain language (e.g., *"3-day college symposium with 8 participants, budget ₹30,000, separate activities for food, decoration, transport, accommodation, photography"*). Gemini creates a tailored structure with activities, budgets, and categories.
+- **Activities & Customization**: Break down any group into sub-activities with allocated budgets, custom expense categories, and granular role permissions.
 - **Multimodal Evidence Intake**: Upload photos of paper receipts, hotel invoices (PDFs), voice audio voice memos, activity videos, WhatsApp chat exports, or natural language text.
 - **AI-Assisted, Deterministically Calculated**: Gemini extracts structured drafts, but **exact Python backend arithmetic** (in integer paise) calculates shares, percentages, balances, and minimal settlement paths.
+- **Function Calling & AI Tools**: Gemini uses controlled backend functions to query group summaries, check real-time balances, retrieve expenses, and create activities dynamically.
+- **Authentication & Owner Retention**: Secure user registration, password hashing (PBKDF2-SHA256), session tokens, and strict owner protection (a group's last active owner cannot be removed or demoted).
 - **Grounded AI Financial Assistant**: An in-app assistant grounded strictly in your group's live database—ask *"How much have we spent so far?"*, *"Who paid the most?"*, or *"What was our largest expense?"* without hallucinations.
-- **PayPal Sandbox Orders v2 Integration**: Verifiable, end-to-end sandbox payments with real-time capture verification and transaction audit logging.
+- **PayPal Sandbox Orders v2 Integration**: Verifiable, end-to-end sandbox payments with real-time capture verification, double-capture prevention, and transaction audit logging.
 
 ---
 
@@ -114,7 +118,7 @@ Edit `.env` with your settings:
 
 ```env
 # Application Metadata
-APP_NAME="SplitSmart AI 2.0"
+APP_NAME="SplitSmart"
 APP_VERSION="2.0.0"
 DEBUG=True
 
@@ -136,7 +140,7 @@ UPLOAD_DIR="uploads"
 MAX_UPLOAD_SIZE_MB=25
 ```
 
-> **Note on Offline / Sandbox Mode**: If `GEMINI_API_KEY` is omitted or network access is restricted, SplitSmart AI 2.0 automatically switches to its deterministic parsing and analysis engines, ensuring all features continue to function seamlessly.
+> **Note on Offline / Sandbox Mode**: If `GEMINI_API_KEY` is omitted or network access is restricted, SplitSmart automatically switches to its deterministic parsing and analysis engines, ensuring all features continue to function seamlessly.
 
 ### 4. Run the Application
 
@@ -152,34 +156,38 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 ## 🧪 Running the Test Suite
 
-SplitSmart AI 2.0 includes a comprehensive test suite covering mathematical precision, edge cases, duplicate detection, and full v2 end-to-end scenarios.
+SplitSmart includes a comprehensive test suite (27 tests) covering mathematical precision, edge cases, duplicate detection, AI group creation, custom activities, and full v2 end-to-end scenarios.
 
 ```bash
-# Run all tests
+# Run all tests (executes in an isolated in-memory SQLite database)
 .\.venv\Scripts\python.exe -m pytest -v
 
 # Or using standard pytest if activated:
 pytest -v
 ```
 
-### Test Coverage Highlights:
-- **`test_financial_logic.py`**:
+### Test Coverage Highlights (27 / 27 Passing):
+- **`test_financial_logic.py`** (5 tests):
   - `test_equal_split_shares`: Verifies zero remainder and exact 1-paise distribution on fractional splits (e.g., ₹100 split 3 ways = 33.34, 33.33, 33.33).
   - `test_percentage_split_rounding`: Validates strict 100% total validation and exact paise rounding.
   - `test_custom_split_validation`: Confirms custom amounts must sum exactly to the total.
   - `test_settlement_simplification`: Verifies debt graph minimization (reduces N-party circular debts to minimum transaction paths).
   - `test_zero_balance_settlement`: Verifies no phantom settlement paths when net balances are zero.
-- **`test_v2_features.py`**:
-  - `test_scenario_1_group_and_members`: Tests activity types, start/end dates, budgets, member roles, contact details.
-  - `test_scenario_2_equal_and_percentage_expenses`: Verifies multi-category expenses and share allocations.
-  - `test_scenario_3_and_4_evidence_and_duplicate_detection`: Tests image/PDF/audio uploads, SHA-256 hash checks, and fuzzy semantic duplicate detection.
-  - `test_scenario_whatsapp_parser`: Tests financial message extraction from WhatsApp text exports.
-  - `test_scenario_5_financial_analysis`: Validates financial overview, category breakdown, contribution balances, and budget alerts.
-  - `test_scenario_6_ai_assistant_grounded_answers`: Validates Q&A responses grounded in real database records.
-  - `test_scenario_7_settlement_and_simplification`: Confirms balance calculation and settlement marking.
-  - `test_scenario_8_paypal_order_lifecycle`: Tests PayPal Orders v2 mock creation, approval URL, and capture verification.
-  - `test_scenario_9_chronological_timeline`: Tests unified chronological sorting across expenses, uploads, and payments.
-  - `test_scenario_10_ai_parse_and_confirm_workflow`: Validates the fix for the known HTTP 400 bug with full draft review and confirmation.
+- **`test_splitsmart_v2_comprehensive.py`** (12 tests):
+  - `test_full_v2_workflow_college_symposium`: Complete lifecycle from AI natural-language proposal to confirmation, member assignment, and budget allocation.
+  - `test_custom_activities_and_budgets`: CRUD operations for activities and sub-event budget tracking.
+  - `test_custom_categories_and_roles`: Custom role permissions and expense category creation.
+  - `test_owner_protection_rule`: Verifies that a group's last active owner cannot be deleted or demoted.
+  - `test_safe_cascade_group_deletion`: Ensures deleting a group cleanly cleans up activities, expenses, evidence links, and settlements.
+  - `test_partial_settlement_workflow`: Tracks partial settlement amounts and keeps outstanding balances accurate.
+  - `test_settlement_cancellation`: Verifies cancelling a settlement restores the original balance.
+  - `test_user_registration_and_authentication`: PBKDF2 password hashing, login token verification, and profile fetching.
+  - `test_ai_refine_group_proposal`: Conversational follow-up instructions modifying group proposals.
+  - `test_ai_function_calling_tools`: Server-side Gemini function calling and tool execution.
+  - `test_paypal_webhook_idempotency`: Idempotent processing of PayPal order capture webhooks.
+  - `test_zero_sum_ledger_invariance`: Mathematical verification that the sum of all member net balances always equals zero ($\sum balances = 0$).
+- **`test_v2_features.py`** (10 tests):
+  - End-to-end multi-member expense sharing, evidence deduplication, WhatsApp chat parsing, financial forecasting, and grounded Q&A.
 
 ---
 
@@ -209,7 +217,7 @@ Drop any file directly onto the Evidence tab or paste text:
   2. **Fuzzy Semantic Match**: Flags potential duplicates if an expense with the same amount (±5%), same merchant, and nearby date already exists.
 
 ### 3. AI Draft Confirmation Workflow (Fix for Known HTTP 400 Bug)
-In SplitSmart AI 2.0, natural language inputs never write directly to the database without user confirmation:
+In SplitSmart, natural language inputs never write directly to the database without user confirmation:
 1. User enters: `"Rahul paid ₹2,400 for dinner at BBQ Nation"`.
 2. `POST /api/ai/parse-expense` returns a **draft** with confidence score, detected fields, and any missing items (e.g., payer selection if ambiguous).
 3. The UI presents the editable draft modal.
@@ -266,4 +274,4 @@ The assistant builds a strict database ground truth context from the active SQLi
 
 ## 📄 License & Academic Notice
 
-SplitSmart AI 2.0 is developed as an educational software engineering and AI systems demonstration project. Built with ❤️ by the SplitSmart AI Team.
+SplitSmart is developed as an educational software engineering and AI systems demonstration project. Built with ❤️ by the SplitSmart Team.

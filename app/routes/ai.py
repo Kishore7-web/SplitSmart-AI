@@ -3,28 +3,132 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.database.database import get_db
-from app.database.models import Group, Member, Expense, ExpenseShare, ExpenseEvidence
+from app.database.models import Group, Member, Expense, ExpenseShare, ExpenseEvidence, AIConversationLog
 from app.schemas.ai import (
     AIParseRequest,
     AIParseResponse,
     AIDraftExpenseConfirm,
     AIChatRequest,
     AIChatResponse,
+    AIGroupProposalRequest,
+    AIGroupRefineRequest,
+    AIGroupConfirmRequest,
+    AIToolExecuteRequest,
 )
+from app.schemas.groups import GroupResponse
 from app.schemas.expenses import ExpenseResponse, ExpenseShareResponse
 from app.services.ai_service import (
     parse_expense_with_ai,
     answer_financial_query,
     is_gemini_configured,
 )
+from app.services.ai_group_creator import (
+    generate_group_proposal,
+    refine_group_proposal,
+    persist_group_structure,
+)
+from app.services.ai_tools import (
+    execute_tool_call,
+    GEMINI_TOOLS_DECLARATIONS,
+)
 from app.services.expense_calculator import calculate_equal_split, calculate_custom_split
+from app.core.auth import get_optional_current_user, User
 
 
 router = APIRouter(
     prefix="/api/ai",
-    tags=["AI Assistant"]
+    tags=["AI Assistant & Group Intelligence"]
 )
 
+
+# =============================================================================
+# 1. AI-POWERED CONVERSATIONAL GROUP CREATION
+# =============================================================================
+
+@router.post("/propose-group")
+def propose_group_from_description(
+    req: AIGroupProposalRequest,
+    user: User | None = Depends(get_optional_current_user)
+):
+    """
+    Step 1: User describes group requirements in natural language.
+    Gemini produces structured group information (activities, budgets, categories, members).
+    """
+    try:
+        proposal = generate_group_proposal(req.description)
+        return {
+            "success": True,
+            "proposal": proposal,
+            "message": "Group structure prepared. You can review, modify activities or confirm creation."
+        }
+    except Exception as exc:
+        raise HTTPException(400, f"Failed to interpret group description: {str(exc)}")
+
+
+@router.post("/refine-group-proposal")
+def refine_group_proposal_endpoint(
+    req: AIGroupRefineRequest,
+    user: User | None = Depends(get_optional_current_user)
+):
+    """
+    Step 2: User provides follow-up modifications (e.g. 'Add photography activity', 'Allocate ₹4,000').
+    Updates the proposed structure in real-time.
+    """
+    try:
+        updated = refine_group_proposal(req.current_proposal, req.instruction)
+        return {
+            "success": True,
+            "proposal": updated,
+            "message": "Proposal updated based on your instruction."
+        }
+    except Exception as exc:
+        raise HTTPException(400, f"Failed to refine proposal: {str(exc)}")
+
+
+@router.post("/confirm-group-creation", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
+def confirm_group_creation(
+    req: AIGroupConfirmRequest,
+    user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Step 3: User confirms the proposed structure.
+    Backend persists real database records: Group, Activities, Members, Custom Categories, Custom Fields.
+    """
+    try:
+        return persist_group_structure(db, req.structure, user=user)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, f"Failed to create group from proposal: {str(exc)}")
+
+
+# =============================================================================
+# 2. GEMINI FUNCTION CALLING / TOOL EXECUTION
+# =============================================================================
+
+@router.get("/tools")
+def list_available_tools():
+    return {
+        "tools": GEMINI_TOOLS_DECLARATIONS
+    }
+
+
+@router.post("/execute-tool")
+def execute_controlled_tool(
+    req: AIToolExecuteRequest,
+    user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        res = execute_tool_call(db, req.tool_name, req.tool_args, user=user)
+        return res
+    except Exception as exc:
+        raise HTTPException(400, f"Tool execution failed: {str(exc)}")
+
+
+# =============================================================================
+# 3. NATURAL LANGUAGE EXPENSE PARSER & DRAFT WORKFLOW
+# =============================================================================
 
 def extract_expense_details(data: AIParseRequest, db: Session) -> dict:
     group = db.get(Group, data.group_id)
@@ -85,7 +189,7 @@ def extract_expense_details(data: AIParseRequest, db: Session) -> dict:
                 payer_name = member_id_to_name[payer_id]
 
         if not payer_id:
-            # Fallback to current user or first active member if single member
+            # Fallback to current user or first active member
             if current_user_name and current_user_name.strip().casefold() in member_lookup:
                 payer_id = member_lookup[current_user_name.strip().casefold()]
                 payer_name = current_user_name
@@ -106,7 +210,6 @@ def extract_expense_details(data: AIParseRequest, db: Session) -> dict:
                         participant_ids.append(mid)
 
         if not participant_ids:
-            # Default to all active members
             participant_ids = [m.id for m in members]
 
         participant_names = [member_id_to_name[mid] for mid in participant_ids]
@@ -169,21 +272,19 @@ def confirm_draft_expense(
         if pid not in member_ids:
             raise HTTPException(400, f"Participant #{pid} is not an active member of this group.")
 
-    # Calculate shares
-    if draft.split_type == "equal":
-        shares = calculate_equal_split(draft.total_amount_paise, draft.participant_ids)
-    else:
-        # Fallback to equal split if custom shares were not explicitly passed
-        shares = calculate_equal_split(draft.total_amount_paise, draft.participant_ids)
+    shares = calculate_equal_split(draft.total_amount_paise, draft.participant_ids)
 
     expense = Expense(
         group_id=draft.group_id,
         paid_by_member_id=draft.paid_by_member_id,
+        activity_id=draft.activity_id,
         description=draft.description.strip(),
         total_amount_paise=draft.total_amount_paise,
         split_type=draft.split_type,
         category=draft.category or "General",
         merchant=draft.merchant.strip() if draft.merchant else None,
+        notes=draft.notes.strip() if draft.notes else None,
+        status="confirmed"
     )
 
     expense.shares = [
@@ -204,6 +305,8 @@ def confirm_draft_expense(
             if ev:
                 ev.expense_id = expense.id
                 ev.link_status = "confirmed"
+                if draft.activity_id:
+                    ev.activity_id = draft.activity_id
                 db.commit()
 
         return (
@@ -226,15 +329,10 @@ def create_expense_using_ai(
     data: AIParseRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Backwards-compatible direct expense creation endpoint.
-    Extracts details and persists them with fallback default payer if missing.
-    """
     details = extract_expense_details(data, db)
 
     payer_id = details["paid_by_member_id"]
     if not payer_id:
-        # Default to first active member if user did not specify
         first_member = db.query(Member).filter(
             Member.group_id == data.group_id,
             Member.is_active.is_(True)
@@ -255,7 +353,8 @@ def create_expense_using_ai(
         total_amount_paise=details["amount_paise"],
         split_type="equal",
         category=details.get("category", "General"),
-        merchant=details.get("merchant")
+        merchant=details.get("merchant"),
+        status="confirmed"
     )
 
     expense.shares = [
@@ -279,6 +378,10 @@ def create_expense_using_ai(
         raise HTTPException(500, f"Failed to create expense: {str(exc)}")
 
 
+# =============================================================================
+# 4. DATABASE-GROUNDED AI FINANCIAL ASSISTANT
+# =============================================================================
+
 @router.post("/chat", response_model=AIChatResponse)
 def chat_with_financial_assistant(
     request: AIChatRequest,
@@ -286,6 +389,21 @@ def chat_with_financial_assistant(
 ):
     try:
         result = answer_financial_query(db, request.group_id, request.message)
+
+        # Log conversation
+        log = AIConversationLog(
+            group_id=request.group_id,
+            role="user",
+            content=request.message
+        )
+        db.add(log)
+        db.add(AIConversationLog(
+            group_id=request.group_id,
+            role="assistant",
+            content=result["reply"]
+        ))
+        db.commit()
+
         return AIChatResponse(
             reply=result["reply"],
             sources=result.get("sources", []),
@@ -303,11 +421,13 @@ def get_ai_status():
         "gemini_configured": is_gemini_configured(),
         "model": settings.gemini_model,
         "features": [
+            "Conversational Group Creation",
             "Natural Language Expense Parsing",
             "Receipt & Bill Vision Understanding",
             "Audio Note Transcription",
             "WhatsApp Export Parsing",
             "AI-Assisted Duplicate Detection",
-            "Grounded Financial Assistant"
+            "Grounded Financial Assistant",
+            "Gemini Function Calling Tools"
         ]
     }

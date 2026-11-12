@@ -68,7 +68,7 @@ def _call_gemini_parse(
     current_user_name: str | None
 ) -> dict[str, Any]:
     prompt = f"""
-You are an expert expense parser for SplitSmart AI 2.0 ("The Financial Memory of a Group").
+You are an expert expense parser for SplitSmart ("The Financial Memory of a Group").
 Extract structured expense information from the user sentence.
 
 Available Group Members:
@@ -115,7 +115,7 @@ Rules:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"responseMimeType": "application/json"}
         },
-        timeout=httpx.Timeout(15.0, connect=2.0)
+        timeout=httpx.Timeout(30.0, connect=10.0)
     )
     response.raise_for_status()
     data = response.json()
@@ -327,7 +327,7 @@ def _call_gemini_receipt_vision(file_bytes: bytes, mime_type: str) -> dict[str, 
     b64_data = base64.b64encode(file_bytes).decode("utf-8")
 
     prompt = f"""
-You are an expert OCR and financial document analysis assistant for SplitSmart AI 2.0.
+You are an expert OCR and financial document analysis assistant for SplitSmart.
 Carefully examine this receipt, invoice, or bill.
 Extract all visible details accurately. Do NOT hallucinate values not present.
 
@@ -366,7 +366,7 @@ Return ONLY valid JSON matching this schema:
             }],
             "generationConfig": {"responseMimeType": "application/json"}
         },
-        timeout=httpx.Timeout(15.0, connect=2.0)
+        timeout=httpx.Timeout(30.0, connect=10.0)
     )
     response.raise_for_status()
     result = response.json()
@@ -425,7 +425,7 @@ def extract_audio_expense(file_bytes: bytes, mime_type: str, member_names: list[
         try:
             b64_data = base64.b64encode(file_bytes).decode("utf-8")
             prompt = f"""
-You are a voice expense transcription assistant for SplitSmart AI.
+You are a voice expense transcription assistant for SplitSmart.
 Listen to this audio note carefully. Transcribe what was said and extract any expense details.
 Available Group Members: {json.dumps(member_names)}
 
@@ -452,7 +452,7 @@ Return ONLY valid JSON:
                     }],
                     "generationConfig": {"responseMimeType": "application/json"}
                 },
-                timeout=httpx.Timeout(15.0, connect=2.0)
+                timeout=httpx.Timeout(30.0, connect=10.0)
             )
             response.raise_for_status()
             res = response.json()
@@ -578,7 +578,7 @@ def answer_financial_query(
 
 def _call_gemini_assistant(user_query: str, grounded_context: dict) -> dict[str, Any]:
     prompt = f"""
-You are the AI Financial Intelligence Assistant for SplitSmart AI 2.0 ("The Financial Memory of a Group").
+You are the AI Financial Intelligence Assistant for SplitSmart ("The Financial Memory of a Group").
 You must answer the user's question using ONLY the provided database ground truth records.
 
 GROUND TRUTH DATABASE RECORDS:
@@ -601,7 +601,7 @@ INSTRUCTIONS:
         json={
             "contents": [{"parts": [{"text": prompt}]}]
         },
-        timeout=httpx.Timeout(15.0, connect=2.0)
+        timeout=httpx.Timeout(30.0, connect=10.0)
     )
     response.raise_for_status()
     result = response.json()

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -114,6 +114,21 @@ def capture_order(
     if not settlement:
         raise HTTPException(404, "Settlement not found")
 
+    # Idempotency check: if transaction already captured, prevent double capture
+    existing_tx = db.query(PaymentTransaction).filter(
+        PaymentTransaction.order_id == req.order_id,
+        PaymentTransaction.status == "COMPLETED"
+    ).first()
+    if existing_tx:
+        return PayPalCaptureResponse(
+            success=True,
+            order_id=req.order_id,
+            capture_id=existing_tx.capture_id,
+            status="COMPLETED",
+            settlement_id=settlement.id,
+            message="Payment already verified and captured."
+        )
+
     if not is_paypal_configured():
         raise HTTPException(503, "PayPal Sandbox credentials are not configured.")
 
@@ -176,6 +191,45 @@ def capture_order(
         raise HTTPException(400, str(val_err))
     except Exception as exc:
         raise HTTPException(502, f"PayPal capture error: {str(exc)}")
+
+
+@router.post("/webhook")
+async def paypal_webhook(
+    group_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Idempotent webhook listener for PayPal event notifications.
+    """
+    try:
+        body = await request.json()
+        event_type = body.get("event_type")
+        resource = body.get("resource", {})
+
+        if event_type == "PAYMENT.CAPTURE.COMPLETED":
+            # Match transaction by order_id or capture_id
+            order_id = resource.get("supplementary_data", {}).get("related_ids", {}).get("order_id")
+            capture_id = resource.get("id")
+
+            if order_id:
+                tx = db.query(PaymentTransaction).filter(
+                    PaymentTransaction.order_id == order_id
+                ).first()
+                if tx and tx.settlement_id:
+                    tx.status = "COMPLETED"
+                    tx.capture_id = capture_id
+                    tx.updated_at = datetime.now(timezone.utc)
+
+                    st = db.get(Settlement, tx.settlement_id)
+                    if st and st.status != "completed":
+                        st.status = "completed"
+                        st.completed_at = datetime.now(timezone.utc)
+                    db.commit()
+
+        return {"status": "received", "event_type": event_type}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
 
 
 @router.get("/transactions")

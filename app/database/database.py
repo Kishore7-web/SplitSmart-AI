@@ -16,7 +16,7 @@ if settings.database_url.startswith("sqlite"):
 engine = create_engine(
     settings.database_url,
     connect_args=connect_args,
-    echo=settings.debug
+    echo=False
 )
 
 
@@ -72,6 +72,12 @@ def run_migrations():
                 cur.execute("ALTER TABLE groups ADD COLUMN budget_paise INTEGER DEFAULT 0")
             if 'currency' not in group_cols:
                 cur.execute("ALTER TABLE groups ADD COLUMN currency VARCHAR(10) DEFAULT 'INR'")
+            if 'is_archived' not in group_cols:
+                cur.execute("ALTER TABLE groups ADD COLUMN is_archived BOOLEAN DEFAULT 0")
+            if 'archived_at' not in group_cols:
+                cur.execute("ALTER TABLE groups ADD COLUMN archived_at DATETIME")
+            if 'created_by_user_id' not in group_cols:
+                cur.execute("ALTER TABLE groups ADD COLUMN created_by_user_id INTEGER")
 
         # 2. Members table migrations
         member_cols = get_columns('members')
@@ -80,6 +86,10 @@ def run_migrations():
                 cur.execute("ALTER TABLE members ADD COLUMN role VARCHAR(30) DEFAULT 'member'")
             if 'phone' not in member_cols:
                 cur.execute("ALTER TABLE members ADD COLUMN phone VARCHAR(30)")
+            if 'user_id' not in member_cols:
+                cur.execute("ALTER TABLE members ADD COLUMN user_id INTEGER")
+            if 'custom_role_id' not in member_cols:
+                cur.execute("ALTER TABLE members ADD COLUMN custom_role_id INTEGER")
 
         # 3. Expenses table migrations
         expense_cols = get_columns('expenses')
@@ -90,11 +100,38 @@ def run_migrations():
                 cur.execute("ALTER TABLE expenses ADD COLUMN merchant VARCHAR(150)")
             if 'expense_date' not in expense_cols:
                 cur.execute("ALTER TABLE expenses ADD COLUMN expense_date DATETIME")
+            if 'activity_id' not in expense_cols:
+                cur.execute("ALTER TABLE expenses ADD COLUMN activity_id INTEGER")
+            if 'notes' not in expense_cols:
+                cur.execute("ALTER TABLE expenses ADD COLUMN notes VARCHAR(500)")
+            if 'status' not in expense_cols:
+                cur.execute("ALTER TABLE expenses ADD COLUMN status VARCHAR(20) DEFAULT 'confirmed'")
+            if 'updated_at' not in expense_cols:
+                cur.execute("ALTER TABLE expenses ADD COLUMN updated_at DATETIME")
+
+        # 4. Settlements table migrations
+        settlement_cols = get_columns('settlements')
+        if settlement_cols:
+            if 'notes' not in settlement_cols:
+                cur.execute("ALTER TABLE settlements ADD COLUMN notes VARCHAR(500)")
+            if 'parent_settlement_id' not in settlement_cols:
+                cur.execute("ALTER TABLE settlements ADD COLUMN parent_settlement_id INTEGER")
+            if 'verified_by_member_id' not in settlement_cols:
+                cur.execute("ALTER TABLE settlements ADD COLUMN verified_by_member_id INTEGER")
+            if 'updated_at' not in settlement_cols:
+                cur.execute("ALTER TABLE settlements ADD COLUMN updated_at DATETIME")
+
+        # 5. Expense evidences table migrations
+        evidence_cols = get_columns('expense_evidences')
+        if evidence_cols:
+            if 'activity_id' not in evidence_cols:
+                cur.execute("ALTER TABLE expense_evidences ADD COLUMN activity_id INTEGER")
 
         conn.commit()
         conn.close()
 
-        # Create any new tables defined in models
+        # Create any new tables defined in models (users, activities, custom_categories, etc.)
+        from app.database import models  # noqa: F401
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"Migration warning: {e}")

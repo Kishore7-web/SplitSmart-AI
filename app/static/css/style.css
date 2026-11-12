@@ -1262,7 +1262,7 @@ textarea:focus {
 }
 
 /* ============================================================== */
-/* SPLITSMART AI 2.0 COMPREHENSIVE STYLES                       */
+/* SPLITSMART COMPREHENSIVE STYLES                                */
 /* ============================================================== */
 
 .version-badge {
@@ -2194,4 +2194,129 @@ textarea:focus {
     padding: 8px 12px;
     border-radius: 6px;
     margin-top: 8px;
+}
+
+
+/* =============================================================================
+   SPLITSMART 2.0 CUSTOMIZATION & MODAL SYSTEM
+   ============================================================================= */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    border: 1px solid var(--border);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.danger-button {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.danger-button:hover {
+    background: #dc2626;
+}
+
+.ai-group-card {
+    border: 2px solid #8b5cf6;
+    background: #faf5ff;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.activity-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.activity-chip {
+    background: white;
+    border: 1px solid #d8b4fe;
+    color: #6b21a8;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tab-nav {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tab-btn.active {
+    background: var(--brand-light, #eff6ff);
+    color: var(--brand, #2563eb);
+}
+
+.small-btn {
+    padding: 4px 10px !important;
+    font-size: 12px !important;
 }

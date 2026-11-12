@@ -31,7 +31,9 @@ class AIDraftExpenseConfirm(BaseModel):
     participant_ids: list[int] = Field(min_length=1)
     split_type: str = Field(default="equal", pattern="^(equal|custom|percentage)$")
     category: str = Field(default="General", max_length=50)
+    activity_id: int | None = None
     merchant: str | None = None
+    notes: str | None = None
     evidence_id: int | None = None
 
 
@@ -44,3 +46,22 @@ class AIChatResponse(BaseModel):
     reply: str
     sources: list[str] = []
     grounded_data: dict[str, Any] = {}
+    suggested_actions: list[dict[str, Any]] = []
+
+
+class AIGroupProposalRequest(BaseModel):
+    description: str = Field(min_length=5, max_length=4000)
+
+
+class AIGroupRefineRequest(BaseModel):
+    current_proposal: dict[str, Any]
+    instruction: str = Field(min_length=2, max_length=1000)
+
+
+class AIGroupConfirmRequest(BaseModel):
+    structure: dict[str, Any]
+
+
+class AIToolExecuteRequest(BaseModel):
+    tool_name: str
+    tool_args: dict[str, Any]

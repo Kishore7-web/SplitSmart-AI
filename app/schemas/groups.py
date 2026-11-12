@@ -20,6 +20,7 @@ class GroupUpdate(BaseModel):
     end_date: datetime | None = None
     budget_paise: int | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, max_length=10)
+    is_archived: bool | None = None
 
 
 class GroupResponse(BaseModel):
@@ -33,6 +34,8 @@ class GroupResponse(BaseModel):
     end_date: datetime | None = None
     budget_paise: int = 0
     currency: str = "INR"
+    is_archived: bool = False
+    archived_at: datetime | None = None
     created_at: datetime
     member_count: int | None = 0
     total_expense_paise: int | None = 0

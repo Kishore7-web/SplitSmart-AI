@@ -16,6 +16,9 @@ from app.routes.ai import router as ai_router
 from app.routes.evidence import router as evidence_router
 from app.routes.analytics import router as analytics_router
 from app.routes.payments import router as payments_router
+from app.routes.auth import router as auth_router
+from app.routes.activities import router as activities_router
+from app.routes.customization import router as customization_router
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -57,7 +60,10 @@ app.mount(
 
 
 # Register all API routers
+app.include_router(auth_router)
 app.include_router(groups_router)
+app.include_router(activities_router)
+app.include_router(customization_router)
 app.include_router(expenses_router)
 app.include_router(settlements_router)
 app.include_router(ai_router)
